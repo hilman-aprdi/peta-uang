@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { LayoutDashboard, ArrowLeftRight, Wallet, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { LayoutDashboard, ArrowLeftRight, Wallet } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,10 +13,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }: AppLayoutProps) {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'transactions', label: 'Transaksi', icon: ArrowLeftRight },
-    { id: 'accounts', label: 'Dompet', icon: Wallet },
+    { id: 'dashboard', href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'transactions', href: '/transactions', label: 'Transaksi', icon: ArrowLeftRight },
+    { id: 'accounts', href: '/accounts', label: 'Dompet', icon: Wallet },
   ];
+  const router = useRouter();
+
+  const navigateTo = (id: string, href: string) => {
+    setActiveTab(id);
+    router.push(href);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col md:flex-row font-sans">
@@ -33,7 +40,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }:
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => navigateTo(item.id, item.href)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${isActive
                     ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -76,7 +83,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }:
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+            onClick={() => navigateTo(item.id, item.href)}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition ${isActive ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'
                 }`}
             >

@@ -1,4 +1,4 @@
-import { db, Transaction } from '@/lib/db/schema';
+import { db } from '@/lib/db/schema';
 
 export async function addTransaction(data: {
   title: string;

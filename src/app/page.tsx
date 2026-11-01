@@ -2,21 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db/schema';
+import { db, type Account } from '@/lib/db/schema';
 import { seedDefaultCategories } from '@/lib/db/seed';
 import { createAccount, getAccountBalance } from '@/lib/services/accountService';
 import { addTransaction } from '@/lib/services/transactionService';
 import { executeTransfer } from '@/lib/services/transferService';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SafeToSpendHero } from '@/components/dashboard/SafeToSpendHero';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { BottomSheet, type TransactionFormData } from '@/components/ui/BottomSheet';
 import { AccountModal } from '@/components/ui/AccountModal';
 import { Wallet, Plus } from 'lucide-react';
 import { exportTransactionsToCSV } from '@/lib/utils/csvExporter';
 import { Download } from 'lucide-react';
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+interface HomeProps {
+  initialTab?: string;
+}
+
+export default function Home({ initialTab = 'dashboard' }: HomeProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountBalances, setAccountBalances] = useState<{ [key: string]: number }>({});
@@ -50,16 +54,16 @@ export default function Home() {
   }, [accounts, transactions]);
 
   // Handler Tambah Akun Baru
-  const handleAddAccount = async (data: { name: string; type: any; initial_balance: number }) => {
+  const handleAddAccount = async (data: { name: string; type: Account['type']; initial_balance: number }) => {
     await createAccount(data);
     setIsAccountModalOpen(false); // ✅ Menutup modal setelah akun berhasil dibuat
   };
 
-  const handleAddTransaction = async (data: any) => {
+  const handleAddTransaction = async (data: TransactionFormData) => {
     if (data.type === 'TRANSFER') {
       await executeTransfer({
         source_account_id: data.account_id,
-        destination_account_id: data.destination_account_id,
+        destination_account_id: data.destination_account_id as string,
         amount: data.amount,
         transaction_date: data.transaction_date,
       });
@@ -69,7 +73,7 @@ export default function Home() {
         type: data.type,
         amount: data.amount,
         account_id: data.account_id,
-        category_id: data.category_id,
+        category_id: data.category_id as string,
         transaction_date: data.transaction_date,
       });
     }

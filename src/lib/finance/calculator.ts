@@ -1,4 +1,4 @@
-import { db, type Transaction, type Account } from '@/lib/db/schema';
+import { db } from '@/lib/db/schema';
 
 /**
  * Calculates real-time balance for a specific account using the Single-Entry Ledger formula:

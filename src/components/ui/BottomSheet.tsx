@@ -4,20 +4,22 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Account, Category } from '@/lib/db/schema';
 
+export interface TransactionFormData {
+  title: string;
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+  amount: number;
+  account_id: string;
+  destination_account_id?: string;
+  category_id?: string;
+  transaction_date: string;
+}
+
 interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   accounts: Account[];
   categories: Category[];
-  onSubmitTx: (data: {
-    title: string;
-    type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
-    amount: number;
-    account_id: string;
-    destination_account_id?: string;
-    category_id?: string;
-    transaction_date: string;
-  }) => Promise<void>;
+  onSubmitTx: (data: TransactionFormData) => Promise<void>;
 }
 
 export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx }: BottomSheetProps) {
