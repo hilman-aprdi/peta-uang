@@ -1,4 +1,6 @@
 import { db } from '@/lib/db/schema';
+import { runAtomicTransaction } from '@/lib/db/transactionHelper';
+import { getAccountBalance } from '@/lib/services/accountService';
 
 export async function executeTransfer(data: {
   source_account_id: string;
@@ -11,20 +13,36 @@ export async function executeTransfer(data: {
     throw new Error('Akun asal dan akun tujuan tidak boleh sama');
   }
 
-  if (data.amount <= 0) {
-    throw new Error('Nominal transfer harus lebih besar dari 0');
+  if (!Number.isFinite(data.amount) || !Number.isInteger(data.amount) || data.amount <= 0) {
+    throw new Error('Nominal transfer harus berupa integer lebih besar dari 0');
+  }
+
+  if (!data.transaction_date || Number.isNaN(Date.parse(data.transaction_date))) {
+    throw new Error('Tanggal transfer tidak valid');
   }
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  // Atomic Transfer Execution
-  await db.transaction('rw', [db.transactions, db.accounts], async () => {
+  await runAtomicTransaction(['transactions', 'accounts'], async () => {
+    const [sourceAccount, destinationAccount] = await Promise.all([
+      db.accounts.get(data.source_account_id),
+      db.accounts.get(data.destination_account_id),
+    ]);
+    if (!sourceAccount || !sourceAccount.is_active || !destinationAccount || !destinationAccount.is_active) {
+      throw new Error('Akun transfer tidak ditemukan atau tidak aktif');
+    }
+
+    const sourceBalance = await getAccountBalance(data.source_account_id);
+    if (sourceBalance < data.amount) {
+      throw new Error('Saldo akun sumber tidak mencukupi untuk transfer ini');
+    }
+
     await db.transactions.add({
       id,
       title: 'Transfer Antar Akun',
       type: 'TRANSFER',
-      amount: Math.floor(data.amount),
+      amount: data.amount,
       account_id: data.source_account_id,
       destination_account_id: data.destination_account_id,
       category_id: undefined,

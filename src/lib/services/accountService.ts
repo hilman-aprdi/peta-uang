@@ -1,19 +1,48 @@
-import { db, Account } from '@/lib/db/schema';
+import { db, type Account } from '@/lib/db/schema';
+
+const ACCOUNT_TYPES: readonly Account['type'][] = ['CASH', 'BANK', 'EWALLET', 'INVESTMENT'];
+
+function validateAccountData(data: {
+  name: string;
+  type: Account['type'];
+  initial_balance: number;
+}): { name: string; type: Account['type']; initial_balance: number } {
+  const name = data.name.trim();
+
+  if (!name) {
+    throw new Error('Nama akun wajib diisi');
+  }
+
+  if (!ACCOUNT_TYPES.includes(data.type)) {
+    throw new Error('Tipe akun tidak valid');
+  }
+
+  if (!Number.isFinite(data.initial_balance) || !Number.isInteger(data.initial_balance)) {
+    throw new Error('Saldo awal harus berupa angka integer');
+  }
+
+  if (data.initial_balance < 0) {
+    throw new Error('Saldo awal tidak boleh negatif');
+  }
+
+  return { name, type: data.type, initial_balance: data.initial_balance };
+}
 
 export async function createAccount(data: {
   name: string;
   type: Account['type'];
   initial_balance: number;
 }): Promise<string> {
+  const account = validateAccountData(data);
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
 
   await db.accounts.add({
     id,
-    name: data.name,
-    type: data.type,
-    initial_balance: Math.max(0, Math.floor(data.initial_balance)), // Integer presisi
-    is_active: 1,
+    name: account.name,
+    type: account.type,
+    initial_balance: account.initial_balance,
+    is_active: true,
     created_at: now,
     updated_at: now,
   });
@@ -22,7 +51,29 @@ export async function createAccount(data: {
 }
 
 export async function getActiveAccounts(): Promise<Account[]> {
-  return await db.accounts.where('is_active').equals(1).toArray();
+  return await db.accounts.filter((account) => account.is_active).toArray();
+}
+
+export async function updateAccount(
+  id: string,
+  data: {
+    name: string;
+    type: Account['type'];
+    initial_balance: number;
+  }
+): Promise<void> {
+  const existing = await db.accounts.get(id);
+  if (!existing) {
+    throw new Error('Akun tidak ditemukan');
+  }
+
+  const account = validateAccountData(data);
+  await db.accounts.update(id, {
+    name: account.name,
+    type: account.type,
+    initial_balance: account.initial_balance,
+    updated_at: new Date().toISOString(),
+  });
 }
 
 // Rumus Ledger: Hitung Saldo Real-Time
@@ -56,8 +107,13 @@ export async function getAccountBalance(accountId: string): Promise<number> {
 }
 
 export async function softDeleteAccount(id: string): Promise<void> {
+  const existing = await db.accounts.get(id);
+  if (!existing) {
+    throw new Error('Akun tidak ditemukan');
+  }
+
   await db.accounts.update(id, {
-    is_active: 0,
+    is_active: false,
     updated_at: new Date().toISOString(),
   });
 }

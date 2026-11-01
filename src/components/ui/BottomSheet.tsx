@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Account, Category } from '@/lib/db/schema';
+import { Account, Category, Transaction } from '@/lib/db/schema';
 
 export interface TransactionFormData {
   title: string;
@@ -12,6 +12,7 @@ export interface TransactionFormData {
   destination_account_id?: string;
   category_id?: string;
   transaction_date: string;
+  note?: string;
 }
 
 interface BottomSheetProps {
@@ -19,40 +20,44 @@ interface BottomSheetProps {
   onClose: () => void;
   accounts: Account[];
   categories: Category[];
+  mode: 'create' | 'edit';
+  transaction?: Transaction;
   onSubmitTx: (data: TransactionFormData) => Promise<void>;
 }
 
-export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx }: BottomSheetProps) {
-  const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'TRANSFER'>('EXPENSE');
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [accountId, setAccountId] = useState(accounts[0]?.id || '');
-  const [destAccountId, setDestAccountId] = useState(accounts[1]?.id || '');
-  const [categoryId, setCategoryId] = useState('');
+export function BottomSheet({ isOpen, onClose, accounts, categories, mode, transaction, onSubmitTx }: BottomSheetProps) {
+  const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'TRANSFER'>(transaction?.type ?? 'EXPENSE');
+  const [title, setTitle] = useState(transaction?.title ?? '');
+  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '');
+  const [accountId, setAccountId] = useState(transaction?.account_id ?? accounts[0]?.id ?? '');
+  const [destAccountId, setDestAccountId] = useState(transaction?.destination_account_id ?? accounts[1]?.id ?? '');
+  const [categoryId, setCategoryId] = useState(transaction?.category_id ?? '');
+  const [transactionDate, setTransactionDate] = useState(transaction?.transaction_date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState(transaction?.note ?? '');
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const filteredCategories = categories.filter((c) => c.type === type);
+  const filteredCategories = categories.filter((c) => c.type === type && c.is_active !== false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const numericAmount = parseInt(amount.replace(/\D/g, ''), 10);
-    if (!numericAmount || numericAmount <= 0) return;
-
-    await onSubmitTx({
-      title: type === 'TRANSFER' ? 'Transfer Antar Akun' : title,
-      type,
-      amount: numericAmount,
-      account_id: accountId || accounts[0]?.id,
-      destination_account_id: type === 'TRANSFER' ? destAccountId : undefined,
-      category_id: type !== 'TRANSFER' ? categoryId || filteredCategories[0]?.id : undefined,
-      transaction_date: new Date().toISOString(),
-    });
-
-    // Reset Form
-    setTitle('');
-    setAmount('');
-    onClose();
+    try {
+      setError('');
+      await onSubmitTx({
+        title: type === 'TRANSFER' ? 'Transfer Antar Akun' : title,
+        type,
+        amount: Number(amount),
+        account_id: accountId || accounts[0]?.id || '',
+        destination_account_id: type === 'TRANSFER' ? destAccountId : undefined,
+        category_id: type !== 'TRANSFER' ? categoryId : undefined,
+        transaction_date: new Date(`${transactionDate}T00:00:00`).toISOString(),
+        note,
+      });
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Gagal menyimpan transaksi');
+    }
   };
 
   return (
@@ -61,7 +66,7 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx 
 
         {/* Header Modal */}
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-bold">Catat Transaksi</h3>
+          <h3 className="text-lg font-bold">{mode === 'edit' ? 'Edit Transaksi' : 'Catat Transaksi'}</h3>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
             <X size={20} />
           </button>
@@ -73,7 +78,12 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx 
             <button
               key={t}
               type="button"
-              onClick={() => setType(t)}
+              onClick={() => {
+                if (mode !== 'create') return;
+                setType(t);
+                setCategoryId('');
+              }}
+              disabled={mode === 'edit'}
               className={`py-2 rounded-lg transition ${type === t
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 shadow-sm'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -85,6 +95,7 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           {/* Nominal Input */}
           <div>
             <label className="text-xs font-medium text-slate-500">Nominal (Rp)</label>
@@ -112,6 +123,28 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx 
               />
             </div>
           )}
+
+          <div>
+            <label className="text-xs font-medium text-slate-500">Catatan (Opsional)</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Tambahkan catatan transaksi"
+              rows={2}
+              className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mt-1 focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-500">Tanggal</label>
+            <input
+              type="date"
+              required
+              value={transactionDate}
+              onChange={(e) => setTransactionDate(e.target.value)}
+              className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mt-1 focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+          </div>
 
           {/* Account Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -166,7 +199,7 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, onSubmitTx 
             type="submit"
             className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition shadow-sm mt-2"
           >
-            Simpan Transaksi
+            {mode === 'edit' ? 'Simpan Perubahan' : 'Simpan Transaksi'}
           </button>
         </form>
       </div>

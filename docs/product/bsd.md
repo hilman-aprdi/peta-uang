@@ -30,6 +30,7 @@ Saldo akun adalah nilai ledger yang dihitung dari `initial_balance` dan seluruh 
 | `icon` | string | Opsional |
 | `color` | string | Opsional |
 | `is_system_default` | boolean | Kategori bawaan tidak dihapus |
+| `is_active` | boolean | Default true; kategori inactive tidak digunakan untuk transaksi baru |
 | `created_at` | timestamp | Wajib |
 
 ### `transactions`
@@ -72,6 +73,8 @@ Saldo akun adalah nilai ledger yang dihitung dari `initial_balance` dan seluruh 
 7. Transfer wajib memiliki akun sumber dan tujuan yang berbeda.
 8. Transfer wajib memiliki saldo sumber yang cukup.
 9. Transfer yang tidak memenuhi aturan ditolak dan menghasilkan peringatan saldo tidak mencukupi bila penyebabnya adalah saldo sumber.
+10. Kategori custom dapat dibuat, diedit, dan dinonaktifkan; kategori default tidak dapat diubah atau dinonaktifkan.
+11. Nama dan tipe kategori aktif harus unik.
 
 ## 4. Perhitungan Ledger
 
@@ -97,4 +100,6 @@ Jika salah satu langkah atomic gagal, perubahan tidak boleh dianggap berhasil.
 
 ## 6. Schema dan Implementasi Aktual
 
-Dokumen ini menetapkan target domain. Implementasi aktual harus diverifikasi terpisah. Pada audit 1 November 2026, source code memakai `is_active` sebagai angka `0/1`, bukan boolean, dan belum memiliki pemeriksaan saldo sumber yang cukup pada transfer. Keduanya dicatat sebagai implementation gap, bukan perubahan terhadap aturan bisnis.
+Schema aktual menggunakan Dexie version 4. Migration mengonversi data lama `is_active` dengan nilai `0/1` menjadi boolean dan mengaktifkan kategori lama yang belum memiliki `is_active`. Karena boolean bukan IndexedDB index key, akun dan kategori aktif diambil melalui filter, bukan melalui `.equals(true)` pada index.
+
+Pemeriksaan saldo sumber transfer diimplementasikan di service transfer dan dijalankan dalam operasi atomic bersama penyimpanan transaksi.

@@ -20,12 +20,12 @@ Implemented tidak berarti Verified.
 | ID | Task | Fase | Status audit |
 |---|---|---|---|
 | IPD-001 | Next.js, TypeScript, Tailwind, dan fondasi source | 1 | Implemented |
-| IPD-002 | Dexie schema, connection, dan seed | 2 | In Progress |
+| IPD-002 | Dexie schema, connection, dan seed | 2 | Implemented |
 | IPD-003 | Atomic transaction helper | 2 | Implemented |
-| IPD-004 | Account create dan lifecycle | 3 | In Progress |
-| IPD-005 | Default dan custom categories | 3 | In Progress |
-| IPD-006 | Income/expense CRUD dan ledger | 3 | In Progress |
-| IPD-007 | Transfer dengan seluruh business rules | 3 | In Progress |
+| IPD-004 | Account create dan lifecycle | 3 | Implemented |
+| IPD-005 | Default dan custom categories | 3 | Implemented |
+| IPD-006 | Income/expense CRUD dan ledger | 3 | Implemented |
+| IPD-007 | Transfer dengan seluruh business rules | 3 | Implemented |
 | IPD-008 | Current Balance dan Safe-to-Spend | 3 | In Progress |
 | IPD-009 | Canonical CSV export | 3 | In Progress |
 | IPD-010 | Layout dan route utama | 4 | In Progress |
@@ -45,7 +45,7 @@ Next.js App Router, TypeScript, React, Tailwind, dan source modular tersedia. Ve
 
 ### IPD-002 — IndexedDB/Dexie
 
-Target MVP memiliki tabel `accounts`, `categories`, `transactions`, dan `bills`, serta seed kategori default. `budgets` dan Goal Allocations ditunda. Acceptance: schema dan migration tervalidasi di IndexedDB.
+Target MVP memiliki tabel `accounts`, `categories`, `transactions`, dan `bills`, serta seed kategori default. `budgets` dan Goal Allocations ditunda. Schema aktual menggunakan Dexie version 4 dengan migration akun `is_active` dari representasi lama `0/1` ke boolean dan migration kategori `is_active` untuk data lama. Acceptance: schema, migration, dan seed tervalidasi di IndexedDB.
 
 ### IPD-003 — Atomic Helper
 
@@ -53,15 +53,15 @@ Helper menjalankan operasi read/write dalam transaksi Dexie dan mengembalikan ro
 
 ### IPD-004 — Accounts
 
-Account dapat dibuat dengan nama, tipe, dan integer initial balance; akun inactive tidak dipakai untuk transaksi baru. Edit dan soft-delete harus memiliki acceptance test.
+Account dapat dibuat dan diedit dengan nama, tipe, dan integer initial balance. Validasi dilakukan di service dan form. Soft-delete mengubah `is_active` menjadi `false` tanpa menghapus histori transaksi. Akun inactive tidak ditampilkan atau digunakan untuk transaksi baru. Acceptance test manual masih diperlukan sebelum status dapat dinaikkan menjadi `Verified`.
 
 ### IPD-005 — Categories
 
-Kategori default tersedia dan kategori custom dapat dikelola. Tipe kategori harus cocok dengan tipe transaksi.
+Kategori default tersedia satu kali dan tidak dapat diubah atau dinonaktifkan. Kategori custom dapat dibuat, diedit, dan dinonaktifkan dengan soft-delete agar histori transaksi tetap aman. Nama dan tipe kategori aktif harus unik. Tipe kategori harus cocok dengan tipe transaksi.
 
 ### IPD-006 — Income/Expense
 
-Tambah, edit, dan hapus harus menjaga ledger, menolak nominal tidak valid, memvalidasi akun aktif, dan memvalidasi kategori. Setiap perubahan harus atomic.
+Income dan expense dapat ditambah, diedit, dan dihapus. Form mendukung catatan dan tanggal transaksi. Service menolak nominal non-integer atau tidak valid, memvalidasi akun aktif dan kategori yang sesuai tipe, serta menjalankan perubahan secara atomic. Transfer tetap ditangani oleh IPD-007. Acceptance test manual masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-007 — Transfer
 
@@ -74,6 +74,8 @@ Transfer harus:
 5. Menampilkan warning saat ditolak karena saldo.
 6. Mengurangi sumber dan menambah tujuan secara logical atomic.
 7. Tidak mengubah net worth keseluruhan.
+
+Pemeriksaan akun, saldo sumber, dan penyimpanan transfer dilakukan dalam satu operasi logical atomic. Acceptance test manual masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-008 — Financial Overview
 
@@ -116,8 +118,8 @@ Gunakan file konfigurasi aktual `next.config.ts` dengan static export. Deploymen
 ## 5. Implementation Gap yang Ditemukan
 
 - Source belum memiliki `/settings`.
+- Verifikasi manual upgrade database dan seed di browser masih diperlukan sebelum IPD-002 berstatus Verified.
 - Dashboard belum menggunakan Safe-to-Spend unpaid bills secara penuh.
-- Transfer belum memeriksa saldo sumber cukup.
 - Export aktual memakai nama file dan header berbeda dari canonical.
 - Filter periode belum tersedia.
 - Service Worker dan ikon manifest belum terbukti tersedia.

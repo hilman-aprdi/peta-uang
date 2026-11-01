@@ -103,4 +103,4 @@ Goal Allocations tidak digunakan dalam kalkulasi MVP.
 
 ## 9. Status Implementasi Flow
 
-Flow di atas adalah perilaku yang disetujui. Pada audit source code saat ini, route `/settings`, filter periode, pemeriksaan saldo transfer, dan sebagian error-state belum terbukti tersedia. Gap tersebut harus ditangani sebagai pekerjaan implementasi terpisah.
+Flow di atas adalah perilaku yang disetujui. Pada audit source code saat ini, route `/settings`, filter periode, dan sebagian error-state belum terbukti tersedia. Pemeriksaan saldo transfer sudah ditangani pada IPD-007.

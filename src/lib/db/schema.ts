@@ -6,7 +6,7 @@ export interface Account {
   name: string;
   type: 'CASH' | 'BANK' | 'EWALLET' | 'INVESTMENT';
   initial_balance: number;
-  is_active: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +18,7 @@ export interface Category {
   icon?: string;
   color?: string;
   is_system_default: boolean;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -61,6 +62,68 @@ export class PetaUangDatabase extends Dexie {
       transactions: 'id, type, account_id, destination_account_id, category_id, transaction_date',
       bills: 'id, is_paid, due_date',
     });
+
+    this.version(2)
+      .stores({
+        accounts: 'id, name, type',
+        categories: 'id, name, type, is_system_default',
+        transactions: 'id, type, account_id, destination_account_id, category_id, transaction_date',
+        bills: 'id, is_paid, due_date',
+      })
+      .upgrade((tx) =>
+        tx.table('accounts').toCollection().modify((account) => {
+          account.is_active = account.is_active === true || account.is_active === 1;
+        })
+      );
+
+    this.version(3)
+      .stores({
+        accounts: 'id, name, type',
+        categories: 'id, name, type, is_system_default',
+        transactions: 'id, type, account_id, destination_account_id, category_id, transaction_date',
+        bills: 'id, is_paid, due_date',
+      })
+      .upgrade(async (tx) => {
+        const categories = tx.table('categories');
+        const transactions = tx.table('transactions');
+        const defaultCategories = await categories
+          .filter((category) => category.is_system_default === true)
+          .toArray();
+        const canonicalByKey = new Map<string, { id: string; name: string; type: string }>();
+        const duplicateCategories: Array<{ id: string; canonicalId: string }> = [];
+
+        for (const category of defaultCategories) {
+          const key = `${category.name}::${category.type}`;
+          const canonical = canonicalByKey.get(key);
+
+          if (canonical) {
+            duplicateCategories.push({ id: category.id, canonicalId: canonical.id });
+          } else {
+            canonicalByKey.set(key, category);
+          }
+        }
+
+        for (const duplicate of duplicateCategories) {
+          await transactions
+            .where('category_id')
+            .equals(duplicate.id)
+            .modify({ category_id: duplicate.canonicalId });
+          await categories.delete(duplicate.id);
+        }
+      });
+
+    this.version(4)
+      .stores({
+        accounts: 'id, name, type',
+        categories: 'id, name, type, is_system_default',
+        transactions: 'id, type, account_id, destination_account_id, category_id, transaction_date',
+        bills: 'id, is_paid, due_date',
+      })
+      .upgrade((tx) =>
+        tx.table('categories').toCollection().modify((category) => {
+          category.is_active = category.is_active !== false;
+        })
+      );
   }
 }
 

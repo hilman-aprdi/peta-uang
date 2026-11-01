@@ -43,7 +43,7 @@ export async function calculateAccountBalance(accountId: string): Promise<number
  * 3. Safe-To-Spend = Current Balance - Unpaid Bills
  */
 export async function calculateFinancialOverview() {
-  const activeAccounts = await db.accounts.filter((acc) => acc.is_active === 1).toArray();
+  const activeAccounts = await db.accounts.filter((acc) => acc.is_active).toArray();
 
 
   let totalCurrentBalance = 0;

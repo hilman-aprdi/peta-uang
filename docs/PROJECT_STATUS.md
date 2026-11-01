@@ -20,6 +20,10 @@ Source saat audit menyediakan sebagian alur dashboard, akun, transaksi, transfer
 - Database lokal `PetaUangDB` memiliki tabel accounts, categories, transactions, dan bills.
 - Seed kategori default tersedia.
 - Komponen dashboard, akun, form transaksi, dan transfer tersedia.
+- Account lifecycle untuk create, edit, dan soft-delete tersedia; validasi service menolak akun tidak valid dan akun inactive ditolak oleh service transaksi.
+- Category lifecycle untuk kategori default dan custom tersedia; kategori custom dapat dibuat, diedit, dan dinonaktifkan tanpa menghapus histori transaksi.
+- Income/expense transaction lifecycle untuk create, edit, delete, catatan, validasi, dan atomic ledger update tersedia; acceptance test manual masih diperlukan.
+- Transfer memvalidasi akun aktif, nominal integer, tanggal, dan saldo sumber dalam operasi atomic; acceptance test manual masih diperlukan.
 - Route source yang tersedia: `/`, `/transactions`, dan `/accounts`.
 - `public/manifest.json` tersedia.
 - Export transaksi tersedia sebagai fungsi client-side.
@@ -34,6 +38,7 @@ Source saat audit menyediakan sebagian alur dashboard, akun, transaksi, transfer
 - Filter periode bulan belum terbukti tersedia.
 - Service Worker dan ikon yang dirujuk manifest belum terbukti tersedia.
 - Test otomatis dan hasil acceptance test belum tersedia.
+- Schema Dexie v2 dan migration `is_active` sudah tersedia, tetapi verifikasi upgrade database di browser belum dicatat.
 - Build produksi belum berstatus Verified.
 
 ## 4. Fokus Prioritas

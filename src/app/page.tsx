@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Account } from '@/lib/db/schema';
+import { db, type Account, type Transaction } from '@/lib/db/schema';
 import { seedDefaultCategories } from '@/lib/db/seed';
-import { createAccount, getAccountBalance } from '@/lib/services/accountService';
-import { addTransaction } from '@/lib/services/transactionService';
+import { createAccount, getAccountBalance, softDeleteAccount, updateAccount } from '@/lib/services/accountService';
+import { addTransaction, deleteTransaction, updateTransaction } from '@/lib/services/transactionService';
 import { executeTransfer } from '@/lib/services/transferService';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SafeToSpendHero } from '@/components/dashboard/SafeToSpendHero';
 import { BottomSheet, type TransactionFormData } from '@/components/ui/BottomSheet';
 import { AccountModal } from '@/components/ui/AccountModal';
+import { CategoryManagement } from '@/components/ui/CategoryManagement';
 import { Wallet, Plus } from 'lucide-react';
 import { exportTransactionsToCSV } from '@/lib/utils/csvExporter';
 import { Download } from 'lucide-react';
@@ -22,12 +23,20 @@ interface HomeProps {
 export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [transactionModalMode, setTransactionModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction>();
+  const [transactionModalKey, setTransactionModalKey] = useState(0);
+  const [transactionActionError, setTransactionActionError] = useState('');
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [accountModalMode, setAccountModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedAccount, setSelectedAccount] = useState<Account>();
+  const [accountModalKey, setAccountModalKey] = useState(0);
+  const [accountActionError, setAccountActionError] = useState('');
   const [accountBalances, setAccountBalances] = useState<{ [key: string]: number }>({});
   const [totalBalance, setTotalBalance] = useState(0);
 
-  const accounts = useLiveQuery(() => db.accounts.where('is_active').equals(1).toArray(), []);
-  const categories = useLiveQuery(() => db.categories.toArray(), []);
+  const accounts = useLiveQuery(() => db.accounts.filter((account) => account.is_active).toArray(), []);
+  const categories = useLiveQuery(() => db.categories.filter((category) => category.is_active !== false).toArray(), []);
   const transactions = useLiveQuery(() => db.transactions.reverse().toArray(), []);
 
   useEffect(() => {
@@ -53,19 +62,58 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
     calcBalances();
   }, [accounts, transactions]);
 
-  // Handler Tambah Akun Baru
-  const handleAddAccount = async (data: { name: string; type: Account['type']; initial_balance: number }) => {
-    await createAccount(data);
-    setIsAccountModalOpen(false); // ✅ Menutup modal setelah akun berhasil dibuat
+  const handleSubmitAccount = async (data: { name: string; type: Account['type']; initial_balance: number }) => {
+    if (accountModalMode === 'edit' && selectedAccount) {
+      await updateAccount(selectedAccount.id, data);
+    } else {
+      await createAccount(data);
+    }
+    setIsAccountModalOpen(false);
+    setSelectedAccount(undefined);
   };
 
-  const handleAddTransaction = async (data: TransactionFormData) => {
-    if (data.type === 'TRANSFER') {
+  const openCreateAccountModal = () => {
+    setAccountModalMode('create');
+    setSelectedAccount(undefined);
+    setAccountModalKey((key) => key + 1);
+    setIsAccountModalOpen(true);
+  };
+
+  const openEditAccountModal = (account: Account) => {
+    setAccountModalMode('edit');
+    setSelectedAccount(account);
+    setAccountModalKey((key) => key + 1);
+    setIsAccountModalOpen(true);
+  };
+
+  const handleDeactivateAccount = async (account: Account) => {
+    if (!window.confirm(`Nonaktifkan akun "${account.name}"?`)) return;
+    try {
+      setAccountActionError('');
+      await softDeleteAccount(account.id);
+    } catch (error) {
+      setAccountActionError(error instanceof Error ? error.message : 'Gagal menonaktifkan akun');
+    }
+  };
+
+  const handleSubmitTransaction = async (data: TransactionFormData) => {
+    if (transactionModalMode === 'edit' && selectedTransaction) {
+      await updateTransaction(selectedTransaction.id, {
+        title: data.title,
+        type: data.type as 'INCOME' | 'EXPENSE',
+        amount: data.amount,
+        account_id: data.account_id,
+        category_id: data.category_id as string,
+        transaction_date: data.transaction_date,
+        note: data.note,
+      });
+    } else if (data.type === 'TRANSFER') {
       await executeTransfer({
         source_account_id: data.account_id,
         destination_account_id: data.destination_account_id as string,
         amount: data.amount,
         transaction_date: data.transaction_date,
+        note: data.note,
       });
     } else {
       await addTransaction({
@@ -75,7 +123,33 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         account_id: data.account_id,
         category_id: data.category_id as string,
         transaction_date: data.transaction_date,
+        note: data.note,
       });
+    }
+  };
+
+  const openCreateTransactionModal = () => {
+    setTransactionModalMode('create');
+    setSelectedTransaction(undefined);
+    setTransactionModalKey((key) => key + 1);
+    setIsAddModalOpen(true);
+  };
+
+  const openEditTransactionModal = (transaction: Transaction) => {
+    if (transaction.type === 'TRANSFER') return;
+    setTransactionModalMode('edit');
+    setSelectedTransaction(transaction);
+    setTransactionModalKey((key) => key + 1);
+    setIsAddModalOpen(true);
+  };
+
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (!window.confirm(`Hapus transaksi "${transaction.title}"?`)) return;
+    try {
+      setTransactionActionError('');
+      await deleteTransaction(transaction.id);
+    } catch (error) {
+      setTransactionActionError(error instanceof Error ? error.message : 'Gagal menghapus transaksi');
     }
   };
 
@@ -91,7 +165,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
     <AppLayout
       activeTab={activeTab}
       setActiveTab={setActiveTab}
-      onOpenAddModal={() => setIsAddModalOpen(true)}
+      onOpenAddModal={openCreateTransactionModal}
     >
       {/* TAB DASHBOARD */}
       {activeTab === 'dashboard' && (
@@ -102,7 +176,6 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
               Oktober 2026
             </span>
           </div>
-
           <SafeToSpendHero
             safeToSpend={totalBalance}
             currentBalance={totalBalance}
@@ -165,12 +238,23 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
                   <div>
                     <p className="font-medium">{tx.title}</p>
                     <p className="text-xs text-slate-400">{tx.type} • {new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
+                    {tx.note && <p className="text-xs text-slate-500 mt-1">{tx.note}</p>}
                   </div>
-                  <span className="font-mono font-bold">Rp {tx.amount.toLocaleString('id-ID')}</span>
+                  <div className="text-right">
+                    <span className="font-mono font-bold">Rp {tx.amount.toLocaleString('id-ID')}</span>
+                    {tx.type !== 'TRANSFER' && (
+                      <div className="mt-1 flex gap-2 justify-end text-xs">
+                        <button type="button" onClick={() => openEditTransactionModal(tx)} className="text-emerald-600 hover:underline">Edit</button>
+                        <button type="button" onClick={() => handleDeleteTransaction(tx)} className="text-red-600 hover:underline">Hapus</button>
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
+          {transactionActionError && <p className="text-sm text-red-600 dark:text-red-400">{transactionActionError}</p>}
+          <CategoryManagement categories={categories || []} />
         </div>
       )}
 
@@ -180,12 +264,13 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold tracking-tight">Daftar Dompet & Akun</h2>
             <button
-              onClick={() => setIsAccountModalOpen(true)}
+              onClick={openCreateAccountModal}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
             >
               <Plus size={14} /> Tambah Akun
             </button>
           </div>
+          {accountActionError && <p className="text-sm text-red-600 dark:text-red-400">{accountActionError}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {accounts?.map((acc) => (
@@ -204,6 +289,14 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
                   <p className="font-mono font-bold text-sm">
                     Rp {(accountBalances[acc.id] || 0).toLocaleString('id-ID')}
                   </p>
+                  <div className="mt-2 flex gap-2 justify-end">
+                    <button type="button" onClick={() => openEditAccountModal(acc)} className="text-xs text-emerald-600 hover:underline">
+                      Edit
+                    </button>
+                    <button type="button" onClick={() => handleDeactivateAccount(acc)} className="text-xs text-red-600 hover:underline">
+                      Nonaktifkan
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -213,7 +306,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3">
               <p className="text-sm text-slate-500">Belum ada akun dompet yang dibuat.</p>
               <button
-                onClick={() => setIsAccountModalOpen(true)}
+                onClick={openCreateAccountModal}
                 className="py-2.5 px-4 bg-emerald-600 text-white rounded-xl text-xs font-semibold"
               >
                 + Buat Akun Pertama
@@ -224,17 +317,23 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
       )}
 
       <BottomSheet
+        key={`transaction-modal-${transactionModalKey}`}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         accounts={accounts || []}
         categories={categories || []}
-        onSubmitTx={handleAddTransaction}
+        mode={transactionModalMode}
+        transaction={selectedTransaction}
+        onSubmitTx={handleSubmitTransaction}
       />
 
       <AccountModal
+        key={`account-modal-${accountModalKey}`}
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
-        onSubmitAccount={handleAddAccount}
+        mode={accountModalMode}
+        account={selectedAccount}
+        onSubmitAccount={handleSubmitAccount}
       />
     </AppLayout>
   );
