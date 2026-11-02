@@ -182,3 +182,8 @@ Sebelum mengajukan perubahan terkait produk atau arsitektur, silakan pelajari do
 PetaUang dikembangkan sebagai proyek open-source dengan tujuan membuat pengelolaan keuangan pribadi lebih mudah dipahami, terorganisasi, dan dapat diakses oleh siapa saja.
 
 **PetaUang — Know your money. Find your direction.**
+
+## Lisensi
+
+PetaUang menggunakan MIT License.
+Lihat file [LICENSE](LICENSE) untuk informasi selengkapnya.
