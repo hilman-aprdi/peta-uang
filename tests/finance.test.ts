@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { db } from '@/lib/db/schema';
 import { calculateAccountBalance, calculateFinancialOverview } from '@/lib/finance/calculator';
+import { softDeleteAccount } from '@/lib/services/accountService';
 
 const account = (id: string, initial_balance: number, is_active = true) => ({
   id,
@@ -57,5 +58,21 @@ describe('financial calculations', () => {
 
     const overview = await calculateFinancialOverview();
     expect(overview.safeToSpend).toBe(-30_000);
+  });
+
+  it('deactivates an account and removes related transfers while preserving income and expense', async () => {
+    await db.accounts.bulkAdd([account('source', 100_000), account('destination', 0)]);
+    await db.transactions.bulkAdd([
+      transaction('transfer', 'TRANSFER', 40_000, 'source', 'destination'),
+      transaction('income', 'INCOME', 20_000, 'source'),
+      transaction('expense', 'EXPENSE', 10_000, 'source'),
+    ]);
+
+    await softDeleteAccount('source');
+
+    await expect(db.accounts.get('source')).resolves.toMatchObject({ is_active: false });
+    await expect(db.transactions.where('type').equals('TRANSFER').count()).resolves.toBe(0);
+    await expect(db.transactions.where('type').equals('INCOME').count()).resolves.toBe(1);
+    await expect(db.transactions.where('type').equals('EXPENSE').count()).resolves.toBe(1);
   });
 });

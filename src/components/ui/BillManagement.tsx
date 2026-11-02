@@ -6,6 +6,7 @@ import type { Bill } from '@/lib/db/schema';
 import { db } from '@/lib/db/schema';
 import { createBill, deleteBill, setBillPaid, updateBill } from '@/lib/services/billService';
 import { BillModal } from '@/components/ui/BillModal';
+import { CheckCircle2, Circle, Pencil, Trash2 } from 'lucide-react';
 
 export function BillManagement() {
   const bills = useLiveQuery(() => db.bills.orderBy('due_date').toArray(), []);
@@ -55,12 +56,11 @@ export function BillManagement() {
 
   return (
     <section className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div>
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Bill Management</h2>
+          <h2 className="text-xl font-bold tracking-tight">Tagihan</h2>
           <p className="text-sm text-slate-500 mt-1">Tagihan unpaid mengurangi Safe-to-Spend.</p>
         </div>
-        <button type="button" onClick={openCreate} className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold">+ Tambah Tagihan</button>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -73,19 +73,29 @@ export function BillManagement() {
             <div>
               <p className="font-semibold text-sm">{bill.title}</p>
               <p className="text-xs text-slate-400">Jatuh tempo: {new Date(bill.due_date).toLocaleDateString('id-ID')}</p>
-              <p className={`text-xs mt-1 font-medium ${bill.is_paid ? 'text-emerald-600' : 'text-amber-600'}`}>{bill.is_paid ? 'Paid' : 'Unpaid'}</p>
+              <p className={`mt-1 ${bill.is_paid ? 'text-emerald-600' : 'text-yellow-600 dark:text-yellow-400'}`} title={bill.is_paid ? 'Paid' : 'Unpaid'} aria-label={`Status: ${bill.is_paid ? 'Paid' : 'Unpaid'}`}>
+                {bill.is_paid
+                  ? <CheckCircle2 size={16} aria-hidden="true" />
+                  : <Circle size={16} aria-hidden="true" />}
+              </p>
             </div>
             <div className="text-right">
               <p className="font-mono font-bold">Rp {bill.amount.toLocaleString('id-ID')}</p>
-              <div className="mt-2 flex gap-2 justify-end text-xs">
-                <button type="button" onClick={() => handleTogglePaid(bill)} className="text-emerald-600 hover:underline">{bill.is_paid ? 'Jadikan unpaid' : 'Tandai paid'}</button>
-                <button type="button" onClick={() => openEdit(bill)} className="text-slate-600 hover:underline">Edit</button>
-                <button type="button" onClick={() => handleDelete(bill)} className="text-red-600 hover:underline">Hapus</button>
+              <div className="mt-2 flex gap-3 justify-end">
+                <button type="button" onClick={() => handleTogglePaid(bill)} title={bill.is_paid ? 'Tandai unpaid' : 'Tandai paid'} aria-label={`${bill.is_paid ? 'Tandai unpaid' : 'Tandai paid'}: ${bill.title}`} className="text-emerald-600 hover:text-emerald-700">
+                  {bill.is_paid ? <Circle size={16} /> : <CheckCircle2 size={16} />}
+                </button>
+                <button type="button" onClick={() => openEdit(bill)} title="Edit tagihan" aria-label={`Edit tagihan ${bill.title}`} className="text-slate-600 hover:text-slate-800"><Pencil size={16} /></button>
+                <button type="button" onClick={() => handleDelete(bill)} title="Hapus tagihan" aria-label={`Hapus tagihan ${bill.title}`} className="text-red-600 hover:text-red-700"><Trash2 size={16} /></button>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      <button type="button" onClick={openCreate} className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition">
+        + Tambah Tagihan
+      </button>
 
       <BillModal
         key={modalKey}

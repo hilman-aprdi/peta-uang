@@ -25,8 +25,11 @@ export const metadata: Metadata = {
   description: "Local-First Personal Finance PWA",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
   },
 };
 

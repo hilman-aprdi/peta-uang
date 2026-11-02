@@ -33,6 +33,7 @@ Individu yang memiliki satu atau beberapa akun keuangan seperti kas, rekening ba
 - Pencatatan transfer antar-akun.
 - Manajemen tagihan dan status paid/unpaid.
 - Dashboard ringkasan saldo dan transaksi.
+- Ringkasan Cash Flow pada dashboard berdasarkan periode terpilih.
 - Filter periode bulan.
 - Ekspor seluruh transaksi ke CSV.
 - PWA dan dukungan offline sesuai hasil verifikasi implementasi.
@@ -56,7 +57,9 @@ Modul utama menggunakan route terpisah:
 | `/` | Dashboard |
 | `/transactions` | Transaksi |
 | `/accounts` | Akun |
-| `/settings` | Settings, termasuk export dan pengaturan lokal |
+| `/bills` | Tagihan dan pengelolaan bill |
+
+Route `/settings` dipertahankan sebagai alias kompatibilitas lama dan bukan modul navigasi utama.
 
 Tabs boleh digunakan sebagai navigasi sekunder di dalam modul, misalnya All, Income, dan Expense pada `/transactions`. Tabs tidak menggantikan route utama.
 
@@ -72,6 +75,9 @@ Tabs boleh digunakan sebagai navigasi sekunder di dalam modul, misalnya All, Inc
 | FR-06 | Period Filter | Pengguna dapat memilih periode bulan untuk ringkasan dan daftar transaksi. |
 | FR-07 | CSV Export | Pengguna dapat mengekspor seluruh transaksi menggunakan nama file dan schema CSV canonical. |
 | FR-08 | Bills | Pengguna dapat menambah, mengubah, menghapus, dan menandai tagihan sebagai paid atau unpaid. |
+| FR-09 | Account deletion | Pengguna dapat menghapus account kapan saja setelah menerima warning; transfer terkait account ikut dihapus, sedangkan income/expense tetap dipertahankan. |
+| FR-10 | Cash Flow | Dashboard menampilkan total income, total expense, dan net cash flow untuk periode yang dipilih; transfer antar-akun tidak dihitung. |
+| FR-11 | Kategori transaksi | Kategori opsional saat mencatat income/expense. Tanpa pilihan kategori, transaksi berstatus Uncategorized. Pengguna dapat melakukan CRUD kategori custom. |
 
 ## 8. Aturan Safe-to-Spend
 
@@ -81,15 +87,26 @@ Untuk MVP:
 
 Goal Allocations tidak termasuk dalam model maupun kalkulasi MVP.
 
-## 9. Persyaratan Non-Fungsional
+## 9. Cash Flow Dashboard
+
+Cash Flow adalah ringkasan pergerakan uang dari transaksi income dan expense pada periode yang dipilih di dashboard. Nilai yang ditampilkan:
+
+- Cash In: jumlah transaksi `INCOME` pada periode tersebut.
+- Cash Out: jumlah transaksi `EXPENSE` pada periode tersebut.
+- Net Cash Flow: `Cash In - Cash Out`.
+
+Transaksi `TRANSFER` dikecualikan karena hanya memindahkan dana di antara account milik pengguna dan bukan pemasukan atau pengeluaran eksternal. Perhitungan dilakukan di sisi client dari data transaksi lokal; hasil agregat tidak disimpan terpisah dan tidak memerlukan API atau database server.
+
+## 10. Persyaratan Non-Fungsional
 
 - Nominal keuangan disimpan sebagai integer Rupiah utuh.
 - Operasi transaksi dan transfer menjaga konsistensi ledger secara atomic.
 - Data transaksi tidak dikirim ke database server pada operasi lokal MVP.
 - Antarmuka responsif dan dapat digunakan melalui keyboard serta pembaca layar sesuai DBD.
 - Klaim offline, installability, dan performa harus diberi status berdasarkan bukti verifikasi, bukan hanya keberadaan konfigurasi.
+- Penghapusan account dan transfer terkait harus atomic agar tidak meninggalkan relasi transfer yang menunjuk account yang dinonaktifkan.
 
-## 10. Acceptance Criteria Utama
+## 11. Acceptance Criteria Utama
 
 ### Pencatatan transaksi
 
@@ -123,6 +140,6 @@ Goal Allocations tidak termasuk dalam model maupun kalkulasi MVP.
 - Header dan urutan kolom mengikuti BSD/IPD.
 - File dapat dibuka oleh aplikasi spreadsheet umum.
 
-## 11. Status Implementasi
+## 12. Status Implementasi
 
 Persyaratan produk tidak menyatakan bahwa seluruh fitur telah tersedia atau terverifikasi. Status implementasi aktual dicatat di `PROJECT_STATUS.md` dan IPD berdasarkan pemeriksaan source code serta hasil pengujian.

@@ -35,6 +35,9 @@ Implemented tidak berarti Verified.
 | IPD-013 | PWA dan offline support | 4 | Implemented |
 | IPD-014 | Unit testing finance dan CSV | 5 | Verified |
 | IPD-015 | Static build dan deployment | 5 | Verified |
+| IPD-017 | Account deletion dan cascade transfer | 3 | Implemented |
+| IPD-018 | Cash Flow pada dashboard | 4 | Implemented |
+| IPD-019 | Kategori opsional dan Uncategorized | 3 | Implemented |
 
 Status ini berdasarkan inspeksi source, file konfigurasi, dan hasil acceptance test manual yang dikonfirmasi owner. IPD-015 telah diverifikasi berdasarkan hasil static build dan pemeriksaan deployment.
 
@@ -54,15 +57,19 @@ Helper menjalankan operasi read/write dalam transaksi Dexie dan mengembalikan ro
 
 ### IPD-004 — Accounts
 
-Account dapat dibuat dan diedit dengan nama, tipe, dan integer initial balance. Validasi dilakukan di service dan form. Soft-delete mengubah `is_active` menjadi `false` tanpa menghapus histori transaksi. Akun inactive tidak ditampilkan atau digunakan untuk transaksi baru. Acceptance test manual telah diverifikasi.
+Account dapat dibuat dan diedit dengan nama, tipe, dan integer initial balance. Validasi dilakukan di service dan form. Penghapusan account menampilkan warning, mengubah `is_active` menjadi `false`, dan menghapus transaksi transfer yang melibatkan account tersebut secara atomic. Transaksi income dan expense tetap dipertahankan. Akun inactive tidak ditampilkan atau digunakan untuk transaksi baru. Implementasi tersedia; acceptance test manual masih diperlukan.
 
 ### IPD-005 — Categories
 
-Kategori default tersedia satu kali dan tidak dapat diubah atau dinonaktifkan. Kategori custom dapat dibuat, diedit, dan dinonaktifkan dengan soft-delete agar histori transaksi tetap aman. Nama dan tipe kategori aktif harus unik. Tipe kategori harus cocok dengan tipe transaksi.
+Kategori default dan custom mendukung CRUD. Delete dilakukan sebagai soft-delete untuk menjaga histori transaksi. Nama dan tipe kategori aktif harus unik. Kategori opsional pada income/expense; jika kosong ditampilkan sebagai `Uncategorized`. Jika dipilih, tipe kategori harus cocok dengan tipe transaksi. Category Management menggunakan modal overlay dan menyediakan daftar ikon.
 
 ### IPD-006 — Income/Expense
 
-Income dan expense dapat ditambah, diedit, dan dihapus. Form mendukung catatan dan tanggal transaksi. Service menolak nominal non-integer atau tidak valid, memvalidasi akun aktif dan kategori yang sesuai tipe, serta menjalankan perubahan secara atomic. Transfer tetap ditangani oleh IPD-007. Acceptance test manual masih diperlukan sebelum status dinaikkan menjadi `Verified`.
+Income dan expense dapat ditambah, diedit, dan dihapus. Form mendukung catatan dan tanggal transaksi. Service menolak nominal non-integer atau tidak valid, memvalidasi akun aktif dan kategori bila dipilih, serta menjalankan perubahan secara atomic. Kategori kosong disimpan tanpa `category_id` dan ditampilkan sebagai `Uncategorized`. Transfer tetap ditangani oleh IPD-007.
+
+### IPD-019 — Kategori Opsional dan Uncategorized
+
+Form income/expense menerima kategori opsional. Nilai kosong disimpan tanpa `category_id`; UI daftar transaksi menampilkan `Uncategorized`. Saat mengedit, pengguna dapat memilih kategori atau mengosongkannya. Acceptance test manual untuk create/edit tanpa kategori, kategori yang dipilih, dan histori setelah kategori dinonaktifkan masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-007 — Transfer
 
@@ -84,7 +91,7 @@ Pemeriksaan akun, saldo sumber, dan penyimpanan transfer dilakukan dalam satu op
 
 ### IPD-016 — Bill Management
 
-Bill Management memungkinkan pengguna menambah, mengubah, menghapus, dan menandai bill sebagai paid atau unpaid melalui `/settings`. Validasi mencakup judul wajib, nominal integer lebih besar dari nol, dan due date valid. Bill baru berstatus unpaid dan hanya bill unpaid yang dikurangi dari Safe-to-Spend. Acceptance test manual untuk seluruh lifecycle bill dan pengaruhnya terhadap Safe-to-Spend masih diperlukan sebelum status dinaikkan menjadi `Verified`.
+Bill Management memungkinkan pengguna menambah, mengubah, menghapus, dan menandai bill sebagai paid atau unpaid melalui `/bills`. Validasi mencakup judul wajib, nominal integer lebih besar dari nol, dan due date valid. Bill baru berstatus unpaid dan hanya bill unpaid yang dikurangi dari Safe-to-Spend. Route `/settings` dipertahankan sebagai alias kompatibilitas lama. Acceptance test manual untuk seluruh lifecycle bill dan pengaruhnya terhadap Safe-to-Spend masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-009 — CSV
 
@@ -100,7 +107,7 @@ Implementasi menggunakan header dan urutan canonical, ISO 8601 UTC untuk timesta
 
 ### IPD-010 — Layout dan Route
 
-Target route `/`, `/transactions`, `/accounts`, dan `/settings` tersedia. Desktop memakai sidebar, mobile memakai bottom navigation, dan active state mengikuti modul aktif. Tabs hanya navigasi sekunder. Acceptance test manual untuk direct navigation dan responsive behavior masih diperlukan sebelum status dinaikkan menjadi `Verified`.
+Target route `/`, `/transactions`, `/accounts`, dan `/bills` tersedia. Desktop memakai sidebar, mobile memakai bottom navigation, dan active state mengikuti modul aktif. Tabs hanya navigasi sekunder. Route `/settings` dipertahankan sebagai alias kompatibilitas. Acceptance test manual untuk direct navigation dan responsive behavior masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-011 — Dashboard
 
@@ -121,6 +128,14 @@ Unit test tersedia untuk ledger, Safe-to-Spend, transfer rejection, CSV schema, 
 ### IPD-015 — Static Export
 
 File konfigurasi aktual `next.config.ts` menggunakan static export. Static build dan verifikasi deployment telah berhasil, sehingga IPD-015 berstatus `Verified`.
+
+### IPD-017 — Account Deletion dan Cascade Transfer
+
+Penghapusan account dengan warning dan konfirmasi user telah diimplementasikan. Service secara atomic menandai account inactive dan menghapus seluruh transaksi `TRANSFER` yang menggunakan account sebagai sumber atau tujuan. Transaksi income/expense tidak terhapus. Automated test untuk cascade transfer dan preservasi transaksi tersedia; acceptance manual untuk warning, pembatalan, dan refresh UI masih diperlukan.
+
+### IPD-018 — Cash Flow Dashboard
+
+Dashboard menampilkan Cash In, Cash Out, dan Net Cash Flow untuk bulan yang dipilih. Kalkulasi dilakukan di client dari transaksi yang sudah dibaca dari IndexedDB; hanya `INCOME` dan `EXPENSE` dihitung, sedangkan `TRANSFER` dikecualikan. Tidak ada tabel baru atau agregat yang disimpan. Acceptance manual untuk pergantian periode, perubahan transaksi, dan periode tanpa transaksi masih perlu dilakukan sebelum status `Verified`.
 
 ## 5. Implementation Gap yang Ditemukan
 

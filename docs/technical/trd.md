@@ -28,9 +28,9 @@ Target route produk:
 - `src/app/page.tsx` → `/`
 - `src/app/transactions/page.tsx` → `/transactions`
 - `src/app/accounts/page.tsx` → `/accounts`
-- `src/app/settings/page.tsx` → `/settings`
+- `src/app/bills/page.tsx` → `/bills`
 
-Source code saat audit memiliki empat route target, termasuk `/settings` untuk Bill Management dan pengaturan lokal.
+Source code memiliki empat route target, termasuk `/bills` untuk Bill Management. `/settings` dipertahankan sebagai alias kompatibilitas dan bukan modul utama.
 
 ## 4. Struktur Source Aktual
 
@@ -57,11 +57,17 @@ Safe-to-Spend MVP:
 
 `Current Balance - Unpaid Bills`
 
+Cash Flow dashboard dihitung client-side dari transaksi lokal untuk periode bulan terpilih: jumlah `INCOME` menjadi Cash In, jumlah `EXPENSE` menjadi Cash Out, dan Net Cash Flow adalah Cash In dikurangi Cash Out. Record `TRANSFER` dikecualikan. Hasil agregat tidak dipersist ke IndexedDB dan tidak menggunakan endpoint server.
+
 Goal Allocations tidak termasuk dalam MVP.
 
 Bill Management menggunakan tabel `bills` pada IndexedDB dan service client-side. Lifecycle pada IPD-016 mencakup create, edit, delete, serta perubahan `is_paid`. Tidak ada API server atau database server untuk operasi bill pada MVP.
 
 Operasi transfer harus memvalidasi amount positif, akun berbeda, akun aktif, dan saldo sumber cukup. Penolakan saldo tidak cukup harus menghasilkan warning UI. Pencatatan transfer dan perubahan saldo diperlakukan sebagai satu operasi logical atomic.
+
+Penghapusan account menggunakan operasi logical atomic yang mencakup tabel `accounts` dan `transactions`. Service menandai account sebagai inactive, lalu menghapus transaksi bertipe `TRANSFER` jika `account_id` atau `destination_account_id` cocok dengan account tersebut. Transaksi `INCOME` dan `EXPENSE` tidak dihapus. UI harus meminta konfirmasi setelah menampilkan warning sebelum service dijalankan.
+
+Kategori pada transaksi income/expense bersifat opsional. Jika tidak dipilih, `category_id` disimpan kosong dan UI menampilkan `Uncategorized`; tidak diperlukan record kategori khusus. Jika kategori dipilih, service memvalidasi status aktif dan kecocokan tipe. Kategori default maupun custom mendukung CRUD; delete dilakukan sebagai soft-delete (deactivate). Menonaktifkan kategori tidak menghapus atau memutus referensi transaksi historis. Seed kategori hanya berjalan jika belum ada kategori default, agar perubahan dan penonaktifan kategori default tidak dibatalkan saat aplikasi dibuka.
 
 ## 6. Autentikasi dan Keamanan
 
@@ -82,7 +88,7 @@ Navigasi antar-modul menggunakan route utama. Tabs hanya untuk state sekunder di
 
 ## 8. PWA dan Offline
 
-PWA menyediakan `public/manifest.json`, ikon 192/512, Service Worker `public/sw.js`, dan registrasi client. Kapabilitas offline/installable belum boleh dinyatakan Verified sebelum diuji melalui browser.
+PWA menyediakan `public/manifest.json`, ikon 192/512, Service Worker `public/sw.js`, dan registrasi client. Service Worker hanya didaftarkan pada production; pada development registration lama di-unregister agar tidak mengganggu Next Dev dan routing. Kapabilitas offline/installable belum boleh dinyatakan Verified sebelum diuji melalui browser.
 
 ## 9. CSV Export Canonical
 

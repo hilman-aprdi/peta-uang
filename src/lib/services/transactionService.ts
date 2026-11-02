@@ -6,7 +6,7 @@ type IncomeExpenseData = {
   type: 'INCOME' | 'EXPENSE';
   amount: number;
   account_id: string;
-  category_id: string;
+  category_id?: string;
   transaction_date: string;
   note?: string;
 };
@@ -31,9 +31,11 @@ export async function addTransaction(data: IncomeExpenseData): Promise<string> {
     throw new Error('Akun transaksi tidak ditemukan atau tidak aktif');
   }
 
-  const category = await db.categories.get(transaction.category_id);
-  if (!category || category.is_active === false || category.type !== transaction.type) {
-    throw new Error('Kategori transaksi tidak ditemukan, tidak aktif, atau tidak sesuai tipe');
+  if (transaction.category_id) {
+    const category = await db.categories.get(transaction.category_id);
+    if (!category || category.is_active === false || category.type !== transaction.type) {
+      throw new Error('Kategori transaksi tidak ditemukan, tidak aktif, atau tidak sesuai tipe');
+    }
   }
 
   const id = crypto.randomUUID();
@@ -67,9 +69,11 @@ export async function updateTransaction(id: string, data: IncomeExpenseData): Pr
   const account = await db.accounts.get(transaction.account_id);
   if (!account || !account.is_active) throw new Error('Akun transaksi tidak ditemukan atau tidak aktif');
 
-  const category = await db.categories.get(transaction.category_id);
-  if (!category || category.is_active === false || category.type !== transaction.type) {
-    throw new Error('Kategori transaksi tidak ditemukan, tidak aktif, atau tidak sesuai tipe');
+  if (transaction.category_id) {
+    const category = await db.categories.get(transaction.category_id);
+    if (!category || category.is_active === false || category.type !== transaction.type) {
+      throw new Error('Kategori transaksi tidak ditemukan, tidak aktif, atau tidak sesuai tipe');
+    }
   }
 
   await runAtomicTransaction(['transactions', 'accounts'], async () => {

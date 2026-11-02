@@ -45,7 +45,7 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, mode, trans
     try {
       setError('');
       await onSubmitTx({
-        title: type === 'TRANSFER' ? 'Transfer Antar Akun' : title,
+        title: type === 'TRANSFER' ? 'Transfer' : title,
         type,
         amount: Number(amount),
         account_id: accountId || accounts[0]?.id || '',
@@ -191,6 +191,7 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, mode, trans
                 onChange={(e) => setCategoryId(e.target.value)}
                 className="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mt-1 focus:ring-2 focus:ring-emerald-500 outline-none"
               >
+                <option value="">Uncategorized</option>
                 {filteredCategories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}

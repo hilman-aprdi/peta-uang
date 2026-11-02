@@ -17,12 +17,8 @@ const DEFAULT_CATEGORIES: Omit<Category, 'id' | 'created_at'>[] = [
 export async function seedDefaultCategories() {
   await runAtomicTransaction(['categories'], async () => {
     const existingCategories = await db.categories.toArray();
-    const existingKeys = new Set(
-      existingCategories.map((category) => `${category.name}::${category.type}`)
-    );
-    const missingCategories = DEFAULT_CATEGORIES.filter(
-      (category) => !existingKeys.has(`${category.name}::${category.type}`)
-    );
+    const hasDefaultCategories = existingCategories.some((category) => category.is_system_default);
+    const missingCategories = hasDefaultCategories ? [] : DEFAULT_CATEGORIES;
 
     if (missingCategories.length > 0) {
     const now = new Date().toISOString();

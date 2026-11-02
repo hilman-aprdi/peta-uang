@@ -1,4 +1,5 @@
 import { db, type Account } from '@/lib/db/schema';
+import { runAtomicTransaction } from '@/lib/db/transactionHelper';
 
 const ACCOUNT_TYPES: readonly Account['type'][] = ['CASH', 'BANK', 'EWALLET', 'INVESTMENT'];
 
@@ -112,8 +113,19 @@ export async function softDeleteAccount(id: string): Promise<void> {
     throw new Error('Akun tidak ditemukan');
   }
 
-  await db.accounts.update(id, {
-    is_active: false,
-    updated_at: new Date().toISOString(),
+  await runAtomicTransaction(['accounts', 'transactions'], async () => {
+    await db.accounts.update(id, {
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    });
+
+    const relatedTransfers = await db.transactions
+      .filter((transaction) =>
+        transaction.type === 'TRANSFER' &&
+        (transaction.account_id === id || transaction.destination_account_id === id)
+      )
+      .toArray();
+
+    await db.transactions.bulkDelete(relatedTransfers.map((transaction) => transaction.id));
   });
 }

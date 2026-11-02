@@ -40,7 +40,7 @@ export async function executeTransfer(data: {
 
     await db.transactions.add({
       id,
-      title: 'Transfer Antar Akun',
+      title: 'Transfer',
       type: 'TRANSFER',
       amount: data.amount,
       account_id: data.source_account_id,

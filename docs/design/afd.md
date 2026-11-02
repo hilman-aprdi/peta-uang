@@ -7,7 +7,7 @@ Modul utama menggunakan route terpisah:
 - `/` — Dashboard
 - `/transactions` — Transactions
 - `/accounts` — Accounts
-- `/settings` — Settings
+- `/bills` — Tagihan
 
 Tabs digunakan hanya sebagai navigasi sekunder di dalam modul, misalnya All, Income, dan Expense pada `/transactions`.
 
@@ -21,13 +21,13 @@ flowchart TD
     Dashboard --> Choice{Pilih modul}
     Choice --> Transactions[Transactions /transactions]
     Choice --> Accounts[Accounts /accounts]
-    Choice --> Settings[Settings /settings]
+    Choice --> Bills[Tagihan /bills]
     Choice --> Add[Tambah transaksi]
     Choice --> Filter[Filter periode]
     Add --> Save[Simpan ke IndexedDB]
     Save --> Dashboard
     Filter --> Dashboard
-    Settings --> Export[Export seluruh transaksi]
+    Bills --> Export[Export seluruh transaksi]
 ```
 
 ## 3.1 Flow Bill Management
@@ -39,16 +39,27 @@ flowchart TD
 5. User dapat mengedit, menghapus, atau mengubah status paid/unpaid.
 6. Dashboard menghitung hanya bill unpaid ke dalam Safe-to-Spend.
 
+## 3.2 Flow Category Management
+
+1. User menekan tombol `Kelola Kategori` pada modul transaksi.
+2. Sistem membuka modal overlay berisi form dan daftar kategori aktif.
+3. User mengisi nama, memilih tipe transaksi, dan memilih ikon.
+4. Sistem menyimpan kategori custom dengan ikon yang dipilih.
+5. User dapat melihat, mengedit, atau menonaktifkan kategori default maupun custom; penonaktifan mempertahankan transaksi historis.
+
 ## 3. Flow Transaksi Income dan Expense
 
 ```mermaid
 flowchart TD
     A[User membuka form] --> B[Memilih Income atau Expense]
-    B --> C[Isi title, amount, category, date, account]
+    B --> C[Isi title, amount, category opsional, date, account]
     C --> D{Validasi}
     D -- Gagal --> E[Tampilkan error form]
-    D -- Berhasil --> F[Validasi akun aktif dan kategori sesuai tipe]
-    F --> G[Dexie logical atomic operation]
+    D -- Berhasil --> F{Kategori dipilih?}
+    F -- Ya --> F1[Validasi kategori sesuai tipe]
+    F -- Tidak --> F2[Simpan tanpa category_id sebagai Uncategorized]
+    F1 --> G[Dexie logical atomic operation]
+    F2 --> G
     G --> H[Simpan transaction record]
     H --> I[Ledger menghitung saldo]
     I --> J[Refresh dashboard dan daftar transaksi]
@@ -75,7 +86,31 @@ flowchart TD
 
 Transfer internal tidak dihitung sebagai income atau expense global dan tidak mengubah net worth keseluruhan.
 
-## 5. Flow Dashboard
+## 5. Flow Penghapusan Account
+
+```mermaid
+flowchart TD
+    A[User memilih hapus account] --> B[Tampilkan warning]
+    B --> C{User konfirmasi?}
+    C -- Tidak --> D[Batalkan dan pertahankan data]
+    C -- Ya --> E[Atomic operation]
+    E --> F[Set account inactive]
+    E --> G[Hapus transfer terkait account]
+    E --> H[Pertahankan income dan expense]
+    F & G & H --> I[Refresh ledger dan tampilkan success message]
+```
+
+Warning harus menjelaskan bahwa seluruh transfer yang melibatkan account tersebut akan dihapus, sedangkan income dan expense tetap tersedia.
+
+## 6. Informasi Cash Flow Dashboard
+
+1. Dashboard memakai periode bulan yang sedang dipilih.
+2. Sistem menjumlahkan transaksi income sebagai Cash In dan expense sebagai Cash Out pada periode tersebut.
+3. Sistem mengecualikan transfer antar-account dari kedua total.
+4. Dashboard menampilkan Cash In, Cash Out, dan selisihnya sebagai Net Cash Flow.
+5. Saat periode atau transaksi berubah, ringkasan dihitung ulang dari data lokal.
+
+## 6. Flow Dashboard
 
 ```mermaid
 flowchart TD
@@ -87,22 +122,22 @@ flowchart TD
 
 Goal Allocations tidak digunakan dalam kalkulasi MVP.
 
-## 6. Flow Filter Periode
+## 7. Flow Filter Periode
 
 1. User memilih bulan.
 2. Sistem memfilter transaksi berdasarkan `transaction_date`.
 3. Sistem memperbarui daftar transaksi dan ringkasan income/expense periode tersebut.
 
-## 7. Flow Export CSV
+## 8. Flow Export CSV
 
-1. User membuka `/settings` atau kontrol export yang disediakan modul.
+1. User membuka `/bills` atau kontrol export yang disediakan modul.
 2. Sistem mengambil seluruh transaksi, akun, dan kategori lokal.
 3. Sistem memetakan data ke schema canonical sembilan kolom.
 4. Sistem menghasilkan file `PetaUang_All_Transactions_YYYY-MM-DD.csv`.
 5. Browser memulai unduhan lokal.
 6. Jika tidak ada data, sistem menampilkan empty-state; jika terjadi kegagalan, sistem menampilkan error-state.
 
-## 8. Empty, Loading, dan Error State
+## 9. Empty, Loading, dan Error State
 
 - Tidak ada akun: tampilkan ajakan membuat akun pertama.
 - Tidak ada transaksi pada periode: tampilkan ajakan mencatat transaksi.
@@ -110,6 +145,6 @@ Goal Allocations tidak digunakan dalam kalkulasi MVP.
 - Operasi database gagal: tampilkan pesan error dan pertahankan data yang sudah tersimpan.
 - Transfer ditolak karena saldo tidak cukup: tampilkan warning yang menjelaskan penyebabnya.
 
-## 9. Status Implementasi Flow
+## 10. Status Implementasi Flow
 
-Flow di atas adalah perilaku yang disetujui. Source code saat ini memiliki route `/settings` dan Bill Management pada IPD-016; acceptance test manual, filter periode, dan sebagian error-state masih perlu diverifikasi.
+Flow di atas adalah perilaku yang disetujui. Source code memiliki route `/bills` untuk Bill Management; `/settings` dipertahankan sebagai alias kompatibilitas. Acceptance test manual, filter periode, dan sebagian error-state masih perlu diverifikasi.

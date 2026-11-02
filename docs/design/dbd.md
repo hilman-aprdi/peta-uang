@@ -59,7 +59,7 @@ Route utama:
 - `/` — Dashboard.
 - `/transactions` — Transactions.
 - `/accounts` — Accounts.
-- `/settings` — Settings.
+- `/bills` — Tagihan.
 
 Mobile menggunakan bottom navigation dan FAB untuk transaksi baru. Desktop menggunakan sidebar kiri sekitar `w-64` dan konten maksimal `max-w-6xl`. Tabs hanya untuk navigasi sekunder dalam sebuah modul.
 

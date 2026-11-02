@@ -86,8 +86,8 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 
 - **Status:** Accepted
 - **Context:** Dokumentasi mencampur tab single-page dengan modul route.
-- **Decision:** Modul utama memakai `/`, `/transactions`, `/accounts`, dan `/settings`. Tabs hanya navigasi sekunder dalam modul.
-- **Consequences:** Route `/settings` menjadi target requirement dan kini tersedia di source; acceptance verification tetap mengikuti status IPD terkait.
+- **Decision:** Modul utama memakai `/`, `/transactions`, `/accounts`, dan `/bills`. Modul bill menggunakan label `Tagihan` dan ikon `Receipt`. Tabs hanya navigasi sekunder dalam modul. `/settings` dipertahankan sebagai alias kompatibilitas lama.
+- **Consequences:** Navigasi utama tidak lagi memakai label Settings untuk halaman bill. Dokumentasi dan acceptance test menggunakan `/bills`; alias lama tetap tersedia agar bookmark/link lama tidak rusak.
 - **Affected documents:** PRD, AFD, DBD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
 
 ## DEC-012 — Bill Management Scope
@@ -97,6 +97,30 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 - **Decision:** Bill Management menjadi bagian MVP dan dilacak sebagai IPD-016. Pengguna dapat membuat, mengedit, menghapus, serta mengubah status paid/unpaid. Hanya bill unpaid yang mengurangi Safe-to-Spend.
 - **Consequences:** BSD, PRD, AFD, IPD, roadmap, dan status project harus mencatat lifecycle bill serta acceptance criteria-nya. Budget dan Goal Allocations tetap ditunda.
 - **Affected documents:** PRD, BSD, AFD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP, PROJECT_HISTORY.
+
+## DEC-013 — Account Deletion and Related Transfers
+
+- **Status:** Accepted
+- **Context:** Account saat ini dinonaktifkan dengan soft-delete, tetapi transfer yang merujuk account tersebut tetap tersimpan. Owner menetapkan bahwa account boleh dihapus kapan saja dengan peringatan sebelum tindakan.
+- **Decision:** Penghapusan account dilakukan sebagai soft-delete setelah user mengonfirmasi warning. Semua transaksi bertipe `TRANSFER` yang memiliki account tersebut sebagai sumber atau tujuan ikut dihapus secara atomic. Transaksi income dan expense tidak ikut dihapus.
+- **Consequences:** Histori transfer terkait account tidak dipertahankan. Ledger akan dihitung ulang dari transaksi yang tersisa. UI wajib menampilkan konsekuensi penghapusan sebelum konfirmasi, dan service wajib menghapus account serta transfer terkait dalam satu operasi atomic.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
+
+## DEC-014 — Dashboard Cash Flow Calculation
+
+- **Status:** Accepted
+- **Context:** Owner meminta ringkasan Cash Flow di dashboard dan menetapkan kalkulasi hanya di front end.
+- **Decision:** Untuk periode dashboard terpilih, Cash In adalah jumlah `INCOME`, Cash Out adalah jumlah `EXPENSE`, dan Net Cash Flow adalah Cash In dikurangi Cash Out. Transfer internal tidak dihitung. Hasil dihitung dari transaksi lokal di client, tidak disimpan sebagai record, dan tidak memerlukan API/server database.
+- **Consequences:** Dashboard dan acceptance criteria harus memakai definisi serta period filter yang sama; tidak ada perubahan schema.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
+
+## DEC-015 — Optional Transaction Categories
+
+- **Status:** Accepted
+- **Context:** Owner menetapkan bahwa form transaksi tidak boleh mewajibkan kategori dan transaksi tanpa kategori harus tetap dapat dicatat.
+- **Decision:** Kategori opsional untuk income dan expense. Jika tidak dipilih, transaksi menyimpan `category_id` kosong dan ditampilkan sebagai `Uncategorized`. Transfer tidak menggunakan kategori. Kategori default dan custom mendukung CRUD; delete dilakukan sebagai soft-delete/nonaktifkan untuk menjaga histori.
+- **Consequences:** Form dan service transaksi perlu menerima kategori kosong; daftar transaksi dan tampilan terkait harus menampilkan fallback `Uncategorized`. Tidak perlu schema baru karena `category_id` sudah nullable. Seed tidak boleh membatalkan perubahan kategori default oleh pengguna.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
 
 ## Lampiran A — Matriks Rekonsiliasi
 
@@ -112,3 +136,6 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 | Gradient | DBD | Aksen terbatas | Kebijakan eksplisit |
 | Routing | PRD, AFD, DBD, TRD, IPD | Empat route utama, tabs sekunder | Route target dan gap source jelas |
 | Next config | TRD, IPD | `next.config.ts` | File aktual diverifikasi dari repository |
+| Account deletion cascade | PRD, BSD, AFD, TRD, IPD | Soft-delete account dengan warning; hapus transfer terkait secara atomic | Income/expense tetap dipertahankan |
+| Dashboard Cash Flow | PRD, BSD, AFD, TRD, IPD | Income minus expense dalam periode terpilih; transfer dikecualikan | Client-side aggregate, tanpa schema/API |
+| Optional category | PRD, BSD, AFD, TRD, IPD | Income/expense tanpa kategori disimpan dengan category_id kosong dan ditampilkan Uncategorized | CRUD kategori custom dengan soft-delete |

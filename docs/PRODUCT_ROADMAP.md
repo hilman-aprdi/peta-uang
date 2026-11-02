@@ -35,6 +35,9 @@ Commit tersebut merupakan catatan historis dan tidak otomatis membuktikan seluru
 | 6 | CSV | Filename dan sembilan kolom canonical — Implemented, perlu verification |
 | 7 | PWA | Service Worker dan ikon implemented; installability dan offline test perlu verification |
 | 8 | Testing | Unit test core dan acceptance evidence — Verified melalui IPD-014 |
+| 9 | Account deletion | Warning dan cascade transfer — Implemented, perlu acceptance UI IPD-017 |
+| 10 | Cash Flow dashboard | Client-side income, expense, dan net cash flow untuk periode terpilih — Implemented IPD-018, perlu verifikasi |
+| 11 | Kategori opsional | Form transaksi menerima kategori kosong dan menampilkan Uncategorized — Implemented IPD-019, perlu verifikasi |
 
 ## 4. Fase Berikutnya
 

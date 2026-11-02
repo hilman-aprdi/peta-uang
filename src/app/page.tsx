@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Account, type Transaction } from '@/lib/db/schema';
+import { db, type Account, type Category, type Transaction } from '@/lib/db/schema';
 import { seedDefaultCategories } from '@/lib/db/seed';
 import { calculateFinancialOverview } from '@/lib/finance/calculator';
 import { createAccount, getAccountBalance, softDeleteAccount, updateAccount } from '@/lib/services/accountService';
@@ -13,9 +13,10 @@ import { SafeToSpendHero } from '@/components/dashboard/SafeToSpendHero';
 import { BottomSheet, type TransactionFormData } from '@/components/ui/BottomSheet';
 import { AccountModal } from '@/components/ui/AccountModal';
 import { CategoryManagement } from '@/components/ui/CategoryManagement';
-import { Wallet, Plus } from 'lucide-react';
+import { ArrowLeftRight, Wallet, Plus, Pencil, Trash2 } from 'lucide-react';
 import { exportTransactionsToCSV } from '@/lib/utils/csvExporter';
 import { Download } from 'lucide-react';
+import { CategoryIcon } from '@/components/ui/CategoryManagement';
 
 interface HomeProps {
   initialTab?: string;
@@ -31,6 +32,43 @@ function formatPeriod(period: string): string {
     month: 'long',
     year: 'numeric',
   });
+}
+
+function TransactionIcon({ transaction, categories }: { transaction: Transaction; categories: Category[] | undefined }) {
+  if (transaction.type === 'TRANSFER') {
+    return <ArrowLeftRight size={18} aria-hidden="true" />;
+  }
+
+  const category = categories?.find((item) => item.id === transaction.category_id);
+  return <CategoryIcon name={category?.icon} size={18} />;
+}
+
+function transactionIconClass(type: Transaction['type']): string {
+  if (type === 'INCOME') return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400';
+  if (type === 'EXPENSE') return 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400';
+  return 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400';
+}
+
+function transactionAmountClass(type: Transaction['type']): string {
+  if (type === 'INCOME') return 'text-emerald-600 dark:text-emerald-400';
+  if (type === 'EXPENSE') return 'text-rose-600 dark:text-rose-400';
+  return 'text-indigo-500 dark:text-indigo-400';
+}
+
+function transactionAccountLabel(transaction: Transaction, accounts: Account[] | undefined): string {
+  const source = accounts?.find((account) => account.id === transaction.account_id);
+  const sourceLabel = source ? `${source.name} (${source.type})` : 'Akun tidak tersedia';
+
+  if (transaction.type !== 'TRANSFER') return sourceLabel;
+
+  const destination = accounts?.find((account) => account.id === transaction.destination_account_id);
+  const destinationLabel = destination ? `${destination.name} (${destination.type})` : 'Akun tidak tersedia';
+  return `${sourceLabel} → ${destinationLabel}`;
+}
+
+function transactionCategoryLabel(transaction: Transaction, categories: Category[] | undefined): string {
+  if (!transaction.category_id) return 'Uncategorized';
+  return categories?.find((category) => category.id === transaction.category_id)?.name ?? 'Uncategorized';
 }
 
 export default function Home({ initialTab = 'dashboard' }: HomeProps) {
@@ -103,7 +141,9 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   };
 
   const handleDeactivateAccount = async (account: Account) => {
-    if (!window.confirm(`Nonaktifkan akun "${account.name}"?`)) return;
+    if (!window.confirm(
+      `Hapus akun "${account.name}"? Akun akan dinonaktifkan dan seluruh transaksi transfer yang melibatkan akun ini akan dihapus. Income dan expense tetap dipertahankan.`
+    )) return;
     try {
       setAccountActionError('');
       await softDeleteAccount(account.id);
@@ -119,7 +159,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         type: data.type as 'INCOME' | 'EXPENSE',
         amount: data.amount,
         account_id: data.account_id,
-        category_id: data.category_id as string,
+        category_id: data.category_id,
         transaction_date: data.transaction_date,
         note: data.note,
       });
@@ -137,7 +177,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         type: data.type,
         amount: data.amount,
         account_id: data.account_id,
-        category_id: data.category_id as string,
+        category_id: data.category_id,
         transaction_date: data.transaction_date,
         note: data.note,
       });
@@ -182,19 +222,21 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const monthlyExpense = filteredTransactions
     ?.filter((t) => t.type === 'EXPENSE')
     .reduce((sum, t) => sum + t.amount, 0) || 0;
+  const netCashFlow = monthlyIncome - monthlyExpense;
 
   return (
     <AppLayout
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       onOpenAddModal={openCreateTransactionModal}
+      showAddTransactionButton={activeTab !== 'accounts' && activeTab !== 'bills'}
     >
       {/* TAB DASHBOARD */}
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Ringkasan Keuangan</h2>
-            <label className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight whitespace-nowrap">Ringkasan Keuangan</h2>
+            <label className="flex w-fit items-center gap-2 text-xs text-slate-500">
               Periode
               <input
                 type="month"
@@ -210,6 +252,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             unpaidBills={financialOverview?.totalUnpaidBills ?? 0}
             monthlyIncome={monthlyIncome}
             monthlyExpense={monthlyExpense}
+            netCashFlow={netCashFlow}
             isLoading={!financialOverview}
           />
 
@@ -223,17 +266,17 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {sortedPeriodTransactions?.slice(0, 5).map((tx) => (
                 <li key={tx.id} className="py-3 flex justify-between items-center text-sm">
-                  <div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`shrink-0 p-2 rounded-xl ${transactionIconClass(tx.type)}`}><TransactionIcon transaction={tx} categories={categories} /></div>
+                    <div className="min-w-0">
                     <p className="font-medium text-slate-900 dark:text-slate-100">{tx.title}</p>
                     <p className="text-xs text-slate-400">{new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
+                    {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
+                    </div>
                   </div>
                   <span
-                    className={`font-mono font-bold ${tx.type === 'INCOME'
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : tx.type === 'EXPENSE'
-                        ? 'text-rose-600 dark:text-rose-400'
-                        : 'text-indigo-500'
-                      }`}
+                    className={`font-mono font-bold ${transactionAmountClass(tx.type)}`}
                   >
                     {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '-' : ''}
                     Rp {tx.amount.toLocaleString('id-ID')}
@@ -248,9 +291,9 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
       {/* TAB TRANSAKSI */}
       {activeTab === 'transactions' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Semua Transaksi</h2>
-            <div className="flex items-center gap-2">
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight whitespace-nowrap">Semua Transaksi</h2>
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="month"
                 aria-label="Pilih periode transaksi"
@@ -274,17 +317,22 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
               {sortedPeriodTransactions?.map((tx) => (
                 <li key={tx.id} className="py-3 flex justify-between items-center text-sm">
-                  <div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`shrink-0 p-2 rounded-xl ${transactionIconClass(tx.type)}`}><TransactionIcon transaction={tx} categories={categories} /></div>
+                    <div className="min-w-0">
                     <p className="font-medium">{tx.title}</p>
                     <p className="text-xs text-slate-400">{tx.type} • {new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
+                    {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
                     {tx.note && <p className="text-xs text-slate-500 mt-1">{tx.note}</p>}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono font-bold">Rp {tx.amount.toLocaleString('id-ID')}</span>
+                    <span className={`font-mono font-bold ${transactionAmountClass(tx.type)}`}>{tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '-' : ''}Rp {tx.amount.toLocaleString('id-ID')}</span>
                     {tx.type !== 'TRANSFER' && (
-                      <div className="mt-1 flex gap-2 justify-end text-xs">
-                        <button type="button" onClick={() => openEditTransactionModal(tx)} className="text-emerald-600 hover:underline">Edit</button>
-                        <button type="button" onClick={() => handleDeleteTransaction(tx)} className="text-red-600 hover:underline">Hapus</button>
+                      <div className="mt-2 flex gap-3 justify-end">
+                        <button type="button" onClick={() => openEditTransactionModal(tx)} title="Edit transaksi" aria-label={`Edit transaksi ${tx.title}`} className="text-emerald-600 hover:text-emerald-700"><Pencil size={16} /></button>
+                        <button type="button" onClick={() => handleDeleteTransaction(tx)} title="Hapus transaksi" aria-label={`Hapus transaksi ${tx.title}`} className="text-red-600 hover:text-red-700"><Trash2 size={16} /></button>
                       </div>
                     )}
                   </div>
@@ -301,15 +349,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
       {/* TAB DOMPET */}
       {activeTab === 'accounts' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold tracking-tight">Daftar Dompet & Akun</h2>
-            <button
-              onClick={openCreateAccountModal}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
-            >
-              <Plus size={14} /> Tambah Akun
-            </button>
-          </div>
+          <h2 className="text-xl font-bold tracking-tight">Daftar Dompet & Akun</h2>
           {accountActionError && <p className="text-sm text-red-600 dark:text-red-400">{accountActionError}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -345,14 +385,11 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
           {(!accounts || accounts.length === 0) && (
             <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3">
               <p className="text-sm text-slate-500">Belum ada akun dompet yang dibuat.</p>
-              <button
-                onClick={openCreateAccountModal}
-                className="py-2.5 px-4 bg-emerald-600 text-white rounded-xl text-xs font-semibold"
-              >
-                + Buat Akun Pertama
-              </button>
             </div>
           )}
+          <button type="button" onClick={openCreateAccountModal} className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition">
+            <Plus size={16} /> Tambah Akun
+          </button>
         </div>
       )}
 

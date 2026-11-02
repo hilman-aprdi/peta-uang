@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, Wallet, Settings } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Wallet, Receipt, Heart } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
     { id: 'dashboard', href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', href: '/transactions', label: 'Transaksi', icon: ArrowLeftRight },
     { id: 'accounts', href: '/accounts', label: 'Dompet', icon: Wallet },
-    { id: 'settings', href: '/settings', label: 'Settings', icon: Settings },
+    { id: 'bills', href: '/bills', label: 'Tagihan', icon: Receipt },
   ];
   const router = useRouter();
 
@@ -66,8 +66,25 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 md:pb-8 p-4 md:p-8 max-w-4xl mx-auto w-full">
+      <main className="flex-1 pb-24 md:pb-8 p-4 md:p-8 max-w-4xl mx-auto w-full flex flex-col">
         {children}
+        <footer className="mt-auto pt-10 pb-2 flex flex-col items-center gap-2 text-xs text-slate-500">
+          <p className="inline-flex items-center gap-1.5">
+            Made with <Heart size={14} className="fill-rose-500 text-rose-500" aria-label="love" />
+          </p>
+          <a
+            href="https://github.com/hilman-aprdi/peta-uang"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex items-center gap-2 hover:text-slate-800 dark:hover:text-slate-200 transition"
+            aria-label="PetaUang Source Code di GitHub"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <path d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.56.1.76-.24.76-.54v-2.1c-3.1.67-3.76-1.32-3.76-1.32-.5-1.28-1.24-1.62-1.24-1.62-1.01-.69.08-.68.08-.68 1.12.08 1.71 1.15 1.71 1.15.99 1.7 2.6 1.21 3.23.92.1-.72.39-1.21.7-1.49-2.48-.28-5.09-1.24-5.09-5.52 0-1.22.44-2.21 1.15-2.99-.12-.28-.5-1.42.11-2.95 0 0 .94-.3 3.05 1.14a10.6 10.6 0 0 1 5.55 0c2.11-1.44 3.04-1.14 3.04-1.14.61 1.53.23 2.67.12 2.95.71.78 1.14 1.77 1.14 2.99 0 4.29-2.61 5.23-5.1 5.51.4.35.75 1.03.75 2.08v3.07c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z" />
+            </svg>
+            <span>PetaUang Source Code</span>
+          </a>
+        </footer>
       </main>
 
       {/* Floating Action Button (FAB) - Mobile Only */}

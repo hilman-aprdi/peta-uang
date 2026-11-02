@@ -9,10 +9,11 @@ interface HeroProps {
   unpaidBills: number;
   monthlyIncome: number;
   monthlyExpense: number;
+  netCashFlow: number;
   isLoading?: boolean;
 }
 
-export function SafeToSpendHero({ safeToSpend, currentBalance, unpaidBills, monthlyIncome, monthlyExpense, isLoading = false }: HeroProps) {
+export function SafeToSpendHero({ safeToSpend, currentBalance, unpaidBills, monthlyIncome, monthlyExpense, netCashFlow, isLoading = false }: HeroProps) {
   const isNegative = !isLoading && safeToSpend < 0;
   const formatAmount = (amount: number) => isLoading ? '—' : `Rp ${amount.toLocaleString('id-ID')}`;
 
@@ -52,8 +53,10 @@ export function SafeToSpendHero({ safeToSpend, currentBalance, unpaidBills, mont
         </div>
       </div>
 
-      {/* Income vs Expense Ringkasan */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Cash Flow ringkasan */}
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cash Flow</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
             <ArrowDownRight size={14} className="text-emerald-500" />
@@ -72,6 +75,16 @@ export function SafeToSpendHero({ safeToSpend, currentBalance, unpaidBills, mont
           <p className="text-base font-bold font-mono text-rose-600 dark:text-rose-400">
             -Rp {monthlyExpense.toLocaleString('id-ID')}
           </p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+            <Wallet size={14} className={netCashFlow >= 0 ? 'text-emerald-500' : 'text-rose-500'} />
+            <span>Net Cash Flow</span>
+          </div>
+          <p className={`text-base font-bold font-mono ${netCashFlow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            {netCashFlow > 0 ? '+' : ''}Rp {netCashFlow.toLocaleString('id-ID')}
+          </p>
+        </div>
         </div>
       </div>
     </div>

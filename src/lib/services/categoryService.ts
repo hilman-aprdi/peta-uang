@@ -1,13 +1,13 @@
 import { db, type Category } from '@/lib/db/schema';
 import { runAtomicTransaction } from '@/lib/db/transactionHelper';
 
-function validateCategoryData(data: { name: string; type: Category['type'] }) {
+function validateCategoryData(data: { name: string; type: Category['type']; icon?: string }) {
   const name = data.name.trim();
   if (!name) throw new Error('Nama kategori wajib diisi');
   if (data.type !== 'INCOME' && data.type !== 'EXPENSE') {
     throw new Error('Tipe kategori tidak valid');
   }
-  return { name, type: data.type };
+  return { name, type: data.type, icon: data.icon || 'circle-dollar-sign' };
 }
 
 async function ensureUniqueCategory(name: string, type: Category['type'], exceptId?: string) {
@@ -24,7 +24,7 @@ export async function getActiveCategories(): Promise<Category[]> {
   return db.categories.filter((category) => category.is_active !== false).toArray();
 }
 
-export async function createCategory(data: { name: string; type: Category['type'] }): Promise<string> {
+export async function createCategory(data: { name: string; type: Category['type']; icon?: string }): Promise<string> {
   const category = validateCategoryData(data);
   const id = crypto.randomUUID();
 
@@ -42,10 +42,9 @@ export async function createCategory(data: { name: string; type: Category['type'
   return id;
 }
 
-export async function updateCategory(id: string, data: { name: string; type: Category['type'] }): Promise<void> {
+export async function updateCategory(id: string, data: { name: string; type: Category['type']; icon?: string }): Promise<void> {
   const existing = await db.categories.get(id);
   if (!existing) throw new Error('Kategori tidak ditemukan');
-  if (existing.is_system_default) throw new Error('Kategori default tidak dapat diubah');
   if (existing.is_active === false) throw new Error('Kategori tidak aktif tidak dapat diubah');
 
   const category = validateCategoryData(data);
@@ -59,8 +58,6 @@ export async function updateCategory(id: string, data: { name: string; type: Cat
 export async function deactivateCategory(id: string): Promise<void> {
   const existing = await db.categories.get(id);
   if (!existing) throw new Error('Kategori tidak ditemukan');
-  if (existing.is_system_default) throw new Error('Kategori default tidak dapat dinonaktifkan');
-
   await runAtomicTransaction(['categories'], async () => {
     await db.categories.update(id, { is_active: false });
   });
