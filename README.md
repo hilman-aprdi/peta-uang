@@ -150,12 +150,6 @@ Sebagai aplikasi yang menggunakan pendekatan *local-first*, PetaUang memiliki be
 - Ekspor CSV belum dapat digunakan untuk memulihkan seluruh kondisi aplikasi.
 - Perilaku instalasi PWA dan akses offline bergantung pada browser serta konfigurasi deployment.
 
-## Lisensi
-
-Informasi lisensi proyek belum ditetapkan karena repository saat ini belum memiliki file `LICENSE`.
-
-Penggunaan, modifikasi, dan distribusi ulang kode harus mengikuti lisensi yang nantinya ditentukan oleh pemilik proyek.
-
 ## Kontribusi
 
 Kontribusi untuk pengembangan PetaUang terbuka bagi siapa saja yang ingin membantu meningkatkan kualitas proyek.
