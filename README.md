@@ -1,5 +1,5 @@
 # PetaUang
-
+[!PetaUang Icon](public/icon-512.png)
 > **Know your money. Find your direction.**
 
 PetaUang adalah aplikasi pengelolaan keuangan pribadi berbasis *local-first* untuk mencatat pemasukan, pengeluaran, transfer antar-akun, serta mengelola tagihan. Dashboard menyajikan ringkasan saldo akun, Safe-to-Spend, dan arus kas berdasarkan bulan yang dipilih.
