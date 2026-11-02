@@ -98,6 +98,9 @@ export function AccountModal({ isOpen, onClose, mode, account, onSubmitAccount }
             <label className="text-xs font-medium text-slate-500">Saldo Awal (Rp)</label>
             <input
               type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
               placeholder="0"
               value={initialBalance}
               onChange={(e) => setInitialBalance(e.target.value)}

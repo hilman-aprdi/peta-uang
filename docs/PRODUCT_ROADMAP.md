@@ -1,6 +1,6 @@
 # PetaUang — Product Roadmap
 
-**Terakhir diperbarui:** 1 November 2026
+**Terakhir diperbarui:** 2 November 2026
 
 ## 1. Prinsip Roadmap
 
@@ -18,9 +18,10 @@ Commit tersebut merupakan catatan historis dan tidak otomatis membuktikan seluru
 |---|---|
 | Fondasi Next.js/TypeScript | Implemented, belum Verified penuh |
 | Local-First ledger | Sebagian Implemented, perlu validasi integrity |
-| PWA | Sebagian Implemented, belum Verified |
-| CSV export | Implemented, schema canonical belum sesuai |
-| Routing modul | Sebagian Implemented; `/settings` belum ada |
+| PWA | Implemented, browser verification belum selesai |
+| CSV export | Implemented, acceptance verification masih diperlukan |
+| Routing modul | Empat route target tersedia; responsive acceptance verification masih berjalan |
+| Static build dan deployment | Verified melalui IPD-015 |
 
 ## 3. Prioritas Stabilisasi
 
@@ -29,14 +30,17 @@ Commit tersebut merupakan catatan historis dan tidak otomatis membuktikan seluru
 | 1 | Integritas ledger | Validasi akun, kategori, integer, dan atomic behavior |
 | 2 | Transfer | Saldo sumber cukup, rejection warning, dan zero-net-worth effect |
 | 3 | Safe-to-Spend | `Current Balance - Unpaid Bills` konsisten di calculator dan dashboard |
-| 4 | Sorting/filter | Urutan `transaction_date` descending dan filter periode |
-| 5 | CSV | Filename dan sembilan kolom canonical |
-| 6 | PWA | Service Worker, ikon, installability, dan offline test |
-| 7 | Testing | Unit dan integration/manual evidence |
+| 4 | Bill Management | Lifecycle bill dan status paid/unpaid — Implemented, perlu verification |
+| 5 | Sorting/filter | Urutan `transaction_date` descending dan filter periode — Implemented, perlu verification |
+| 6 | CSV | Filename dan sembilan kolom canonical — Implemented, perlu verification |
+| 7 | PWA | Service Worker dan ikon implemented; installability dan offline test perlu verification |
+| 8 | Testing | Unit test core dan acceptance evidence — Verified melalui IPD-014 |
 
 ## 4. Fase Berikutnya
 
 Setelah stabilisasi MVP, pekerjaan dapat mencakup penyempurnaan UX, pencarian transaksi, laporan, dan kategori custom berdasarkan persetujuan serta acceptance criteria baru.
+
+Bill Management diimplementasikan sebagai IPD-016 dan menunggu acceptance verification.
 
 Goal Allocations, Local PIN Protection, sinkronisasi cloud, dan integrasi bank tetap ditunda di luar MVP.
 

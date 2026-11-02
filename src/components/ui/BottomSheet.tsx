@@ -102,6 +102,9 @@ export function BottomSheet({ isOpen, onClose, accounts, categories, mode, trans
             <input
               type="number"
               required
+              min="1"
+              step="1"
+              inputMode="numeric"
               placeholder="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

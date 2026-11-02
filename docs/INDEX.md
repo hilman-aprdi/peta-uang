@@ -41,4 +41,4 @@ Sebelum perubahan implementasi, baca INDEX, PROJECT_STATUS, dan dokumen yang rel
 
 Setiap perubahan signifikan harus memperbarui status atau riwayat yang relevan. Keputusan baru harus dicatat di decision log.
 
-**Status dokumentasi:** Direkonsiliasi berdasarkan DEC-001 sampai DEC-011; implementation gap tetap dicatat.
+**Status dokumentasi:** Direkonsiliasi berdasarkan DEC-001 sampai DEC-012; implementation gap tetap dicatat.

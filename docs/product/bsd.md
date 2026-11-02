@@ -75,6 +75,9 @@ Saldo akun adalah nilai ledger yang dihitung dari `initial_balance` dan seluruh 
 9. Transfer yang tidak memenuhi aturan ditolak dan menghasilkan peringatan saldo tidak mencukupi bila penyebabnya adalah saldo sumber.
 10. Kategori custom dapat dibuat, diedit, dan dinonaktifkan; kategori default tidak dapat diubah atau dinonaktifkan.
 11. Nama dan tipe kategori aktif harus unik.
+12. Bill baru berstatus `is_paid=false`.
+13. Bill hanya dapat berstatus paid atau unpaid.
+14. Hanya bill dengan `is_paid=false` yang masuk ke Total Unpaid Bills.
 
 ## 4. Perhitungan Ledger
 
@@ -85,6 +88,8 @@ Current Balance adalah total saldo seluruh akun aktif.
 Safe-to-Spend MVP adalah:
 
 `Safe-to-Spend = Current Balance - Total Unpaid Bills`
+
+Bill Management mencakup create, edit, delete, dan perubahan status paid/unpaid. Operasi bill harus mempertahankan nominal integer dan due date yang valid.
 
 ## 5. Aturan Transfer
 

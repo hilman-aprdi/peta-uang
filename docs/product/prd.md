@@ -31,6 +31,7 @@ Individu yang memiliki satu atau beberapa akun keuangan seperti kas, rekening ba
 - Manajemen akun keuangan.
 - Pencatatan income dan expense.
 - Pencatatan transfer antar-akun.
+- Manajemen tagihan dan status paid/unpaid.
 - Dashboard ringkasan saldo dan transaksi.
 - Filter periode bulan.
 - Ekspor seluruh transaksi ke CSV.
@@ -70,6 +71,7 @@ Tabs boleh digunakan sebagai navigasi sekunder di dalam modul, misalnya All, Inc
 | FR-05 | Dashboard | Dashboard menampilkan Current Balance, Safe-to-Spend, ringkasan bulanan, dan transaksi terbaru. |
 | FR-06 | Period Filter | Pengguna dapat memilih periode bulan untuk ringkasan dan daftar transaksi. |
 | FR-07 | CSV Export | Pengguna dapat mengekspor seluruh transaksi menggunakan nama file dan schema CSV canonical. |
+| FR-08 | Bills | Pengguna dapat menambah, mengubah, menghapus, dan menandai tagihan sebagai paid atau unpaid. |
 
 ## 8. Aturan Safe-to-Spend
 
@@ -104,6 +106,15 @@ Goal Allocations tidak termasuk dalam model maupun kalkulasi MVP.
 - Transfer ditolak jika saldo sumber tidak mencukupi dan pengguna mendapat peringatan.
 - Transfer berhasil mengurangi saldo sumber dan menambah saldo tujuan sebagai satu operasi logical atomic.
 - Transfer tidak mengubah net worth keseluruhan.
+
+### Bills
+
+- Judul tagihan wajib diisi.
+- Nominal tagihan harus berupa integer Rupiah lebih besar dari nol.
+- Due date wajib valid.
+- Tagihan baru berstatus unpaid secara default.
+- Pengguna dapat mengubah status tagihan menjadi paid atau unpaid.
+- Hanya tagihan unpaid yang dikurangi dari Safe-to-Spend.
 
 ### CSV
 

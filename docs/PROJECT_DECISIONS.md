@@ -47,7 +47,7 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 - **Status:** Accepted
 - **Context:** Header lama menggunakan nama dan urutan yang berbeda.
 - **Decision:** CSV memiliki sembilan kolom berurutan: `transaction_id`, `transaction_date`, `transaction_type`, `category`, `amount`, `account_from`, `account_to`, `description`, `created_at`.
-- **Consequences:** Mapping account origin/destination, format tanggal/nominal, dan empty value harus konsisten. Implementasi aktual yang berbeda dicatat sebagai gap.
+- **Consequences:** Mapping account origin/destination, format tanggal/nominal, empty value, dan escaping harus konsisten. Exporter mengimplementasikan schema ini; acceptance verification tetap diperlukan.
 - **Affected documents:** PRD, AFD, TRD, IPD, PROJECT_STATUS.
 
 ## DEC-007 — Implementation Structure Scope Exclusion
@@ -87,8 +87,16 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 - **Status:** Accepted
 - **Context:** Dokumentasi mencampur tab single-page dengan modul route.
 - **Decision:** Modul utama memakai `/`, `/transactions`, `/accounts`, dan `/settings`. Tabs hanya navigasi sekunder dalam modul.
-- **Consequences:** Route `/settings` adalah target requirement; source saat ini belum memilikinya dan gap tersebut dicatat.
+- **Consequences:** Route `/settings` menjadi target requirement dan kini tersedia di source; acceptance verification tetap mengikuti status IPD terkait.
 - **Affected documents:** PRD, AFD, DBD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
+
+## DEC-012 — Bill Management Scope
+
+- **Status:** Accepted
+- **Context:** Schema `bills` dan kalkulasi Safe-to-Spend sudah tersedia, tetapi lifecycle bill belum memiliki task UI/service.
+- **Decision:** Bill Management menjadi bagian MVP dan dilacak sebagai IPD-016. Pengguna dapat membuat, mengedit, menghapus, serta mengubah status paid/unpaid. Hanya bill unpaid yang mengurangi Safe-to-Spend.
+- **Consequences:** BSD, PRD, AFD, IPD, roadmap, dan status project harus mencatat lifecycle bill serta acceptance criteria-nya. Budget dan Goal Allocations tetap ditunda.
+- **Affected documents:** PRD, BSD, AFD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP, PROJECT_HISTORY.
 
 ## Lampiran A — Matriks Rekonsiliasi
 

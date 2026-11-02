@@ -30,6 +30,15 @@ flowchart TD
     Settings --> Export[Export seluruh transaksi]
 ```
 
+## 3.1 Flow Bill Management
+
+1. User membuka modul tagihan pada route atau kontrol yang disediakan.
+2. User membuat bill dengan title, amount, dan due date.
+3. Sistem memvalidasi title, integer amount, dan due date.
+4. Bill baru disimpan dengan `is_paid=false`.
+5. User dapat mengedit, menghapus, atau mengubah status paid/unpaid.
+6. Dashboard menghitung hanya bill unpaid ke dalam Safe-to-Spend.
+
 ## 3. Flow Transaksi Income dan Expense
 
 ```mermaid
@@ -103,4 +112,4 @@ Goal Allocations tidak digunakan dalam kalkulasi MVP.
 
 ## 9. Status Implementasi Flow
 
-Flow di atas adalah perilaku yang disetujui. Pada audit source code saat ini, route `/settings`, filter periode, dan sebagian error-state belum terbukti tersedia. Pemeriksaan saldo transfer sudah ditangani pada IPD-007.
+Flow di atas adalah perilaku yang disetujui. Source code saat ini memiliki route `/settings` dan Bill Management pada IPD-016; acceptance test manual, filter periode, dan sebagian error-state masih perlu diverifikasi.

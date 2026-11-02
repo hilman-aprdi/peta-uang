@@ -2,20 +2,22 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, Wallet } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Wallet, Settings } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenAddModal: () => void;
+  showAddTransactionButton?: boolean;
 }
 
-export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }: AppLayoutProps) {
+export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, showAddTransactionButton = true }: AppLayoutProps) {
   const navItems = [
     { id: 'dashboard', href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', href: '/transactions', label: 'Transaksi', icon: ArrowLeftRight },
     { id: 'accounts', href: '/accounts', label: 'Dompet', icon: Wallet },
+    { id: 'settings', href: '/settings', label: 'Settings', icon: Settings },
   ];
   const router = useRouter();
 
@@ -53,12 +55,14 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }:
           })}
         </nav>
 
-        <button
-          onClick={onOpenAddModal}
-          className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition shadow-sm"
-        >
-          + Transaksi Baru
-        </button>
+        {showAddTransactionButton && (
+          <button
+            onClick={onOpenAddModal}
+            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition shadow-sm"
+          >
+            + Transaksi Baru
+          </button>
+        )}
       </aside>
 
       {/* Main Content Area */}
@@ -67,13 +71,15 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal }:
       </main>
 
       {/* Floating Action Button (FAB) - Mobile Only */}
-      <button
-        onClick={onOpenAddModal}
-        className="md:hidden fixed right-4 bottom-20 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition"
-        aria-label="Tambah Transaksi"
-      >
-        <span className="text-2xl font-light">+</span>
-      </button>
+      {showAddTransactionButton && (
+        <button
+          onClick={onOpenAddModal}
+          className="md:hidden fixed right-4 bottom-20 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition"
+          aria-label="Tambah Transaksi"
+        >
+          <span className="text-2xl font-light">+</span>
+        </button>
+      )}
 
       {/* Bottom Navigation Bar - Mobile Only */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around items-center z-30 px-2">

@@ -30,7 +30,7 @@ Target route produk:
 - `src/app/accounts/page.tsx` → `/accounts`
 - `src/app/settings/page.tsx` → `/settings`
 
-Source code saat audit memiliki tiga route pertama. Route `/settings` belum tersedia dan dicatat sebagai implementation gap.
+Source code saat audit memiliki empat route target, termasuk `/settings` untuk Bill Management dan pengaturan lokal.
 
 ## 4. Struktur Source Aktual
 
@@ -41,7 +41,7 @@ src/
 └── lib/
     ├── db/              # Dexie schema, seed, transaction helper
     ├── finance/         # Kalkulasi ledger dan overview
-    ├── services/        # Account, transaction, transfer service
+    ├── services/        # Account, category, transaction, transfer service
     └── utils/           # CSV exporter
 ```
 
@@ -58,6 +58,8 @@ Safe-to-Spend MVP:
 `Current Balance - Unpaid Bills`
 
 Goal Allocations tidak termasuk dalam MVP.
+
+Bill Management menggunakan tabel `bills` pada IndexedDB dan service client-side. Lifecycle pada IPD-016 mencakup create, edit, delete, serta perubahan `is_paid`. Tidak ada API server atau database server untuk operasi bill pada MVP.
 
 Operasi transfer harus memvalidasi amount positif, akun berbeda, akun aktif, dan saldo sumber cukup. Penolakan saldo tidak cukup harus menghasilkan warning UI. Pencatatan transfer dan perubahan saldo diperlakukan sebagai satu operasi logical atomic.
 
@@ -80,7 +82,7 @@ Navigasi antar-modul menggunakan route utama. Tabs hanya untuk state sekunder di
 
 ## 8. PWA dan Offline
 
-PWA membutuhkan manifest, ikon yang tersedia, dan Service Worker/caching yang dapat diverifikasi. Pada audit saat ini, `public/manifest.json` ada, tetapi Service Worker dan file ikon yang dirujuk belum terbukti tersedia. Karena itu kapabilitas offline/installable belum boleh dinyatakan Verified.
+PWA menyediakan `public/manifest.json`, ikon 192/512, Service Worker `public/sw.js`, dan registrasi client. Kapabilitas offline/installable belum boleh dinyatakan Verified sebelum diuji melalui browser.
 
 ## 9. CSV Export Canonical
 
@@ -103,7 +105,7 @@ Aturan format:
 - Field yang tidak berlaku berisi string kosong.
 - Nilai yang mengandung koma, kutip, atau newline mengikuti escaping CSV standar.
 
-Implementasi aktual saat audit memakai header, nama file, dan format yang berbeda. Itu adalah implementation gap yang memerlukan task terpisah.
+Implementasi exporter menggunakan header, nama file, dan format canonical di atas. Field `description` berisi `title`, ditambah `note` jika tersedia dengan pemisah ` — `. Field yang tidak berlaku menggunakan string kosong.
 
 ## 10. Error Handling dan Verifikasi
 

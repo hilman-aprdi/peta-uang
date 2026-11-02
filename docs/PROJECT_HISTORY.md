@@ -19,7 +19,7 @@ Deskripsi commit mencatat Local-First Ledger, PWA, dan CSV export. Catatan terse
 
 ### Rekonstruksi Dokumentasi
 
-Pada 1 November 2026, dokumentasi yang belum terlacak Git pernah terhapus dan kemudian direkonstruksi. Rekonstruksi ini selanjutnya direkonsiliasi berdasarkan keputusan DEC-001 sampai DEC-011 dan pemeriksaan source aktual.
+Pada 1 November 2026, dokumentasi yang belum terlacak Git pernah terhapus dan kemudian direkonstruksi. Rekonstruksi ini selanjutnya direkonsiliasi berdasarkan keputusan DEC-001 sampai DEC-012 dan pemeriksaan source aktual.
 
 ## 2. Keputusan Historis yang Masih Berlaku
 
@@ -53,3 +53,9 @@ Detail traceability berada di `docs/PROJECT_DECISIONS.md`.
 ## 5. Pemeliharaan Riwayat
 
 Setiap entri baru mencatat tanggal, perubahan atau keputusan, alasan, referensi issue/commit bila ada, dan perbedaan antara rencana, implementasi, serta verifikasi.
+
+### Scope Update — 2 November 2026
+
+- Bill Management diterima sebagai scope MVP dan dilacak pada IPD-016.
+- IPD-008 Financial Overview diverifikasi secara manual.
+- Safe-to-Spend menggunakan `Current Balance - Total Unpaid Bills`; Goal Allocations tetap ditunda.

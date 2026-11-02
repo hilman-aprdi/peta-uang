@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Account, type Transaction } from '@/lib/db/schema';
 import { seedDefaultCategories } from '@/lib/db/seed';
+import { calculateFinancialOverview } from '@/lib/finance/calculator';
 import { createAccount, getAccountBalance, softDeleteAccount, updateAccount } from '@/lib/services/accountService';
 import { addTransaction, deleteTransaction, updateTransaction } from '@/lib/services/transactionService';
 import { executeTransfer } from '@/lib/services/transferService';
@@ -20,6 +21,18 @@ interface HomeProps {
   initialTab?: string;
 }
 
+function getCurrentPeriod(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatPeriod(period: string): string {
+  return new Date(`${period}-01T00:00:00`).toLocaleDateString('id-ID', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -27,17 +40,23 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction>();
   const [transactionModalKey, setTransactionModalKey] = useState(0);
   const [transactionActionError, setTransactionActionError] = useState('');
+  const [transactionActionSuccess, setTransactionActionSuccess] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState(getCurrentPeriod);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalMode, setAccountModalMode] = useState<'create' | 'edit'>('create');
   const [selectedAccount, setSelectedAccount] = useState<Account>();
   const [accountModalKey, setAccountModalKey] = useState(0);
   const [accountActionError, setAccountActionError] = useState('');
   const [accountBalances, setAccountBalances] = useState<{ [key: string]: number }>({});
-  const [totalBalance, setTotalBalance] = useState(0);
 
   const accounts = useLiveQuery(() => db.accounts.filter((account) => account.is_active).toArray(), []);
   const categories = useLiveQuery(() => db.categories.filter((category) => category.is_active !== false).toArray(), []);
   const transactions = useLiveQuery(() => db.transactions.reverse().toArray(), []);
+  const financialOverview = useLiveQuery(() => calculateFinancialOverview(), []);
+  const filteredTransactions = transactions?.filter((transaction) => transaction.transaction_date.slice(0, 7) === selectedPeriod);
+  const sortedPeriodTransactions = filteredTransactions?.slice().sort(
+    (first, second) => Date.parse(second.transaction_date) - Date.parse(first.transaction_date)
+  );
 
   useEffect(() => {
     async function init() {
@@ -49,15 +68,12 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   useEffect(() => {
     async function calcBalances() {
       if (!accounts) return;
-      let total = 0;
       const balances: { [key: string]: number } = {};
       for (const acc of accounts) {
         const bal = await getAccountBalance(acc.id);
         balances[acc.id] = bal;
-        total += bal;
       }
       setAccountBalances(balances);
-      setTotalBalance(total);
     }
     calcBalances();
   }, [accounts, transactions]);
@@ -126,11 +142,15 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         note: data.note,
       });
     }
+    setTransactionActionError('');
+    setTransactionActionSuccess(transactionModalMode === 'edit' ? 'Transaksi berhasil diperbarui.' : 'Transaksi berhasil disimpan.');
   };
 
   const openCreateTransactionModal = () => {
     setTransactionModalMode('create');
     setSelectedTransaction(undefined);
+    setTransactionActionSuccess('');
+    setTransactionActionError('');
     setTransactionModalKey((key) => key + 1);
     setIsAddModalOpen(true);
   };
@@ -147,17 +167,19 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
     if (!window.confirm(`Hapus transaksi "${transaction.title}"?`)) return;
     try {
       setTransactionActionError('');
+      setTransactionActionSuccess('');
       await deleteTransaction(transaction.id);
+      setTransactionActionSuccess('Transaksi berhasil dihapus.');
     } catch (error) {
       setTransactionActionError(error instanceof Error ? error.message : 'Gagal menghapus transaksi');
     }
   };
 
-  const monthlyIncome = transactions
+  const monthlyIncome = filteredTransactions
     ?.filter((t) => t.type === 'INCOME')
     .reduce((sum, t) => sum + t.amount, 0) || 0;
 
-  const monthlyExpense = transactions
+  const monthlyExpense = filteredTransactions
     ?.filter((t) => t.type === 'EXPENSE')
     .reduce((sum, t) => sum + t.amount, 0) || 0;
 
@@ -172,26 +194,34 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold tracking-tight">Ringkasan Keuangan</h2>
-            <span className="text-xs font-medium px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-400">
-              Oktober 2026
-            </span>
+            <label className="flex items-center gap-2 text-xs text-slate-500">
+              Periode
+              <input
+                type="month"
+                value={selectedPeriod}
+                onChange={(event) => setSelectedPeriod(event.target.value)}
+                className="text-xs font-medium px-2.5 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 outline-none"
+              />
+            </label>
           </div>
           <SafeToSpendHero
-            safeToSpend={totalBalance}
-            currentBalance={totalBalance}
+            safeToSpend={financialOverview?.safeToSpend ?? 0}
+            currentBalance={financialOverview?.totalCurrentBalance ?? 0}
+            unpaidBills={financialOverview?.totalUnpaidBills ?? 0}
             monthlyIncome={monthlyIncome}
             monthlyExpense={monthlyExpense}
+            isLoading={!financialOverview}
           />
 
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <h3 className="font-semibold text-sm text-slate-600 dark:text-slate-400">Transaksi Terakhir</h3>
-            {(!transactions || transactions.length === 0) && (
+            <h3 className="font-semibold text-sm text-slate-600 dark:text-slate-400">Transaksi {formatPeriod(selectedPeriod)}</h3>
+            {(!sortedPeriodTransactions || sortedPeriodTransactions.length === 0) && (
               <p className="text-xs text-slate-400 text-center py-6">
-                Belum ada transaksi tercatat. Buat akun dahulu lalu tekan tombol + untuk mulai.
+                Belum ada transaksi pada periode yang dipilih.
               </p>
             )}
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-              {transactions?.slice(0, 5).map((tx) => (
+              {sortedPeriodTransactions?.slice(0, 5).map((tx) => (
                 <li key={tx.id} className="py-3 flex justify-between items-center text-sm">
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">{tx.title}</p>
@@ -220,20 +250,29 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold tracking-tight">Semua Transaksi</h2>
-            <button
-              onClick={exportTransactionsToCSV}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-lg transition border border-slate-700"
-            >
-              <Download size={14} /> Export CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="month"
+                aria-label="Pilih periode transaksi"
+                value={selectedPeriod}
+                onChange={(event) => setSelectedPeriod(event.target.value)}
+                className="text-xs font-medium px-2.5 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 outline-none"
+              />
+              <button
+                onClick={exportTransactionsToCSV}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-slate-800 text-slate-200 hover:bg-slate-700 rounded-lg transition border border-slate-700"
+              >
+                <Download size={14} /> Export CSV
+              </button>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-            {(!transactions || transactions.length === 0) && (
-              <p className="text-xs text-slate-400 text-center py-6">Belum ada riwayat transaksi.</p>
+            {(!sortedPeriodTransactions || sortedPeriodTransactions.length === 0) && (
+              <p className="text-xs text-slate-400 text-center py-6">Belum ada transaksi pada periode {formatPeriod(selectedPeriod)}.</p>
             )}
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-              {transactions?.map((tx) => (
+              {sortedPeriodTransactions?.map((tx) => (
                 <li key={tx.id} className="py-3 flex justify-between items-center text-sm">
                   <div>
                     <p className="font-medium">{tx.title}</p>
@@ -253,6 +292,7 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
               ))}
             </ul>
           </div>
+          {transactionActionSuccess && <p className="text-sm text-emerald-600 dark:text-emerald-400">{transactionActionSuccess}</p>}
           {transactionActionError && <p className="text-sm text-red-600 dark:text-red-400">{transactionActionError}</p>}
           <CategoryManagement categories={categories || []} />
         </div>

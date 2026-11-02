@@ -22,20 +22,21 @@ Implemented tidak berarti Verified.
 | IPD-001 | Next.js, TypeScript, Tailwind, dan fondasi source | 1 | Implemented |
 | IPD-002 | Dexie schema, connection, dan seed | 2 | Implemented |
 | IPD-003 | Atomic transaction helper | 2 | Implemented |
-| IPD-004 | Account create dan lifecycle | 3 | Implemented |
-| IPD-005 | Default dan custom categories | 3 | Implemented |
+| IPD-004 | Account create dan lifecycle | 3 | Verified |
+| IPD-005 | Default dan custom categories | 3 | Verified |
 | IPD-006 | Income/expense CRUD dan ledger | 3 | Implemented |
 | IPD-007 | Transfer dengan seluruh business rules | 3 | Implemented |
-| IPD-008 | Current Balance dan Safe-to-Spend | 3 | In Progress |
-| IPD-009 | Canonical CSV export | 3 | In Progress |
-| IPD-010 | Layout dan route utama | 4 | In Progress |
-| IPD-011 | Dashboard dan period filter | 4 | In Progress |
-| IPD-012 | Form modal/bottom sheet | 4 | In Progress |
-| IPD-013 | PWA dan offline support | 4 | In Progress |
-| IPD-014 | Unit testing finance dan CSV | 5 | Todo |
-| IPD-015 | Static build dan deployment | 5 | In Progress |
+| IPD-008 | Current Balance dan Safe-to-Spend | 3 | Verified |
+| IPD-016 | Bill management | 3 | Implemented |
+| IPD-009 | Canonical CSV export | 3 | Implemented |
+| IPD-010 | Layout dan route utama | 4 | Implemented |
+| IPD-011 | Dashboard dan period filter | 4 | Implemented |
+| IPD-012 | Form modal/bottom sheet | 4 | Implemented |
+| IPD-013 | PWA dan offline support | 4 | Implemented |
+| IPD-014 | Unit testing finance dan CSV | 5 | Verified |
+| IPD-015 | Static build dan deployment | 5 | Verified |
 
-Status ini berdasarkan inspeksi source dan file konfigurasi pada audit dokumentasi. Tidak ada task yang diberi status Verified karena tidak tersedia bukti acceptance test yang memadai.
+Status ini berdasarkan inspeksi source, file konfigurasi, dan hasil acceptance test manual yang dikonfirmasi owner. IPD-015 telah diverifikasi berdasarkan hasil static build dan pemeriksaan deployment.
 
 ## 4. Detail Task dan Acceptance Criteria
 
@@ -53,7 +54,7 @@ Helper menjalankan operasi read/write dalam transaksi Dexie dan mengembalikan ro
 
 ### IPD-004 — Accounts
 
-Account dapat dibuat dan diedit dengan nama, tipe, dan integer initial balance. Validasi dilakukan di service dan form. Soft-delete mengubah `is_active` menjadi `false` tanpa menghapus histori transaksi. Akun inactive tidak ditampilkan atau digunakan untuk transaksi baru. Acceptance test manual masih diperlukan sebelum status dapat dinaikkan menjadi `Verified`.
+Account dapat dibuat dan diedit dengan nama, tipe, dan integer initial balance. Validasi dilakukan di service dan form. Soft-delete mengubah `is_active` menjadi `false` tanpa menghapus histori transaksi. Akun inactive tidak ditampilkan atau digunakan untuk transaksi baru. Acceptance test manual telah diverifikasi.
 
 ### IPD-005 — Categories
 
@@ -79,7 +80,11 @@ Pemeriksaan akun, saldo sumber, dan penyimpanan transfer dilakukan dalam satu op
 
 ### IPD-008 — Financial Overview
 
-`Current Balance` adalah total saldo akun aktif. `Safe-to-Spend` adalah `Current Balance - Unpaid Bills`. Goal Allocations tidak digunakan dalam MVP.
+`Current Balance` adalah total saldo akun aktif. `Safe-to-Spend` adalah `Current Balance - Unpaid Bills`. Dashboard menggunakan calculator financial overview yang reactive terhadap accounts, transactions, dan bills. Nilai negatif tetap ditampilkan sebagai nilai negatif. Goal Allocations tidak digunakan dalam MVP. Acceptance criteria IPD-008 telah diverifikasi secara manual.
+
+### IPD-016 — Bill Management
+
+Bill Management memungkinkan pengguna menambah, mengubah, menghapus, dan menandai bill sebagai paid atau unpaid melalui `/settings`. Validasi mencakup judul wajib, nominal integer lebih besar dari nol, dan due date valid. Bill baru berstatus unpaid dan hanya bill unpaid yang dikurangi dari Safe-to-Spend. Acceptance test manual untuk seluruh lifecycle bill dan pengaruhnya terhadap Safe-to-Spend masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-009 — CSV
 
@@ -91,39 +96,36 @@ transaction_id,transaction_date,transaction_type,category,amount,account_from,ac
 
 Nama file canonical: `PetaUang_All_Transactions_YYYY-MM-DD.csv`. Format tanggal, nominal, dan empty value mengikuti TRD.
 
+Implementasi menggunakan header dan urutan canonical, ISO 8601 UTC untuk timestamp, integer Rupiah tanpa pemisah, string kosong untuk field yang tidak berlaku, serta escaping CSV standar. Field `description` memuat title dan note bila note tersedia. Acceptance test manual masih diperlukan sebelum status dinaikkan menjadi `Verified`.
+
 ### IPD-010 — Layout dan Route
 
-Target route adalah `/`, `/transactions`, `/accounts`, dan `/settings`. Desktop memakai sidebar; mobile memakai bottom navigation. Tabs hanya navigasi sekunder.
+Target route `/`, `/transactions`, `/accounts`, dan `/settings` tersedia. Desktop memakai sidebar, mobile memakai bottom navigation, dan active state mengikuti modul aktif. Tabs hanya navigasi sekunder. Acceptance test manual untuk direct navigation dan responsive behavior masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-011 — Dashboard
 
-Dashboard menampilkan Current Balance, Safe-to-Spend, income/expense periode terpilih, dan transaksi terbaru yang diurutkan berdasarkan `transaction_date` descending.
+Dashboard menampilkan Current Balance, Safe-to-Spend, income/expense periode terpilih, dan transaksi terbaru yang diurutkan berdasarkan `transaction_date` descending. Period filter menggunakan bulan dan berlaku pada ringkasan serta daftar transaksi. Acceptance test manual untuk pergantian periode dan urutan transaksi masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-012 — Input UI
 
-Expense, income, dan transfer menggunakan form terkontrol; mobile memakai Bottom Sheet; desktop memakai dialog; nominal ditampilkan sebagai integer Rupiah; state success/error tersedia.
+Expense, income, dan transfer menggunakan form terkontrol; mobile memakai Bottom Sheet; desktop memakai dialog; nominal menggunakan input integer Rupiah; dan state success/error tersedia. Account dan Bill modal memakai centered dialog dengan pola validasi dan error yang sama. Acceptance test manual untuk responsive form, validasi, dan feedback success/error masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-013 — PWA
 
-Manifest, ikon, Service Worker, installability, dan offline behavior harus tersedia serta diuji. Keberadaan manifest saja tidak cukup untuk status Verified.
+Manifest, ikon, Service Worker, registrasi client, installability, dan offline behavior tersedia pada source. Acceptance test browser untuk installability dan offline behavior masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-014 — Testing
 
-Tambahkan unit test untuk ledger, Safe-to-Spend, transfer rejection, CSV schema, dan CSV escaping. Tambahkan integration/manual test untuk IndexedDB dan routing.
+Unit test tersedia untuk ledger, Safe-to-Spend, transfer rejection, CSV schema, CSV escaping, serta lifecycle bill. Test menggunakan Vitest dan `fake-indexeddb`. Acceptance criteria IPD-014 telah diverifikasi.
 
 ### IPD-015 — Static Export
 
-Gunakan file konfigurasi aktual `next.config.ts` dengan static export. Deployment hanya dinyatakan siap setelah build dan verifikasi hosting berhasil.
+File konfigurasi aktual `next.config.ts` menggunakan static export. Static build dan verifikasi deployment telah berhasil, sehingga IPD-015 berstatus `Verified`.
 
 ## 5. Implementation Gap yang Ditemukan
 
-- Source belum memiliki `/settings`.
 - Verifikasi manual upgrade database dan seed di browser masih diperlukan sebelum IPD-002 berstatus Verified.
-- Dashboard belum menggunakan Safe-to-Spend unpaid bills secara penuh.
-- Export aktual memakai nama file dan header berbeda dari canonical.
-- Filter periode belum tersedia.
-- Service Worker dan ikon manifest belum terbukti tersedia.
-- Test otomatis belum tersedia.
+- IPD-014 telah diverifikasi melalui test otomatis core finance, transfer, CSV, dan bill lifecycle serta acceptance manual terkait.
 
 Gap tersebut adalah rekomendasi task implementasi dan tidak diubah dalam rekonsiliasi dokumentasi.
 

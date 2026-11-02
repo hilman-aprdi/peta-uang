@@ -6,36 +6,49 @@ import { ShieldCheck, Wallet, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 interface HeroProps {
   safeToSpend: number;
   currentBalance: number;
+  unpaidBills: number;
   monthlyIncome: number;
   monthlyExpense: number;
+  isLoading?: boolean;
 }
 
-export function SafeToSpendHero({ safeToSpend, currentBalance, monthlyIncome, monthlyExpense }: HeroProps) {
+export function SafeToSpendHero({ safeToSpend, currentBalance, unpaidBills, monthlyIncome, monthlyExpense, isLoading = false }: HeroProps) {
+  const isNegative = !isLoading && safeToSpend < 0;
+  const formatAmount = (amount: number) => isLoading ? '—' : `Rp ${amount.toLocaleString('id-ID')}`;
+
   return (
     <div className="space-y-4">
       {/* Safe to Spend Card */}
-      <div className="bg-gradient-to-br from-emerald-950 to-slate-900 text-white p-6 rounded-2xl border border-emerald-800/40 shadow-sm relative overflow-hidden">
-        <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold tracking-wider uppercase">
+      <div className={`${isNegative ? 'bg-rose-950 border-rose-800/60' : 'bg-emerald-950 border-emerald-800/40'} bg-gradient-to-br to-slate-900 text-white p-6 rounded-2xl border shadow-sm relative overflow-hidden`}>
+        <div className={`flex items-center gap-2 ${isNegative ? 'text-rose-300' : 'text-emerald-400'} text-xs font-semibold tracking-wider uppercase`}>
           <ShieldCheck size={16} />
           <span>Safe-to-Spend</span>
         </div>
 
         <div className="mt-3">
-          <h2 className="text-3xl md:text-4xl font-extrabold font-mono tracking-tight">
-            Rp {safeToSpend.toLocaleString('id-ID')}
+          <h2 className={`text-3xl md:text-4xl font-extrabold font-mono tracking-tight ${isNegative ? 'text-rose-200' : ''}`}>
+            {formatAmount(safeToSpend)}
           </h2>
           <p className="text-slate-400 text-xs mt-1">
-            Uang aman yang siap digunakan setelah memperhitungkan perkiraan pengeluaran.
+            Saldo setelah dikurangi seluruh tagihan yang belum dibayar.
           </p>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-emerald-900/60 flex justify-between items-center text-xs">
-          <span className="text-slate-400 flex items-center gap-1.5">
-            <Wallet size={14} /> Total Saldo Real:
-          </span>
-          <span className="font-mono font-semibold text-slate-200">
-            Rp {currentBalance.toLocaleString('id-ID')}
-          </span>
+        <div className="mt-6 pt-4 border-t border-slate-700/70 grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <span className="text-slate-400 flex items-center gap-1.5">
+              <Wallet size={14} /> Current Balance
+            </span>
+            <span className="font-mono font-semibold text-slate-200">
+              {formatAmount(currentBalance)}
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="text-slate-400 block">Unpaid Bills</span>
+            <span className="font-mono font-semibold text-slate-200">
+              {formatAmount(unpaidBills)}
+            </span>
+          </div>
         </div>
       </div>
 
