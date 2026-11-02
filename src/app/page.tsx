@@ -269,10 +269,10 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`shrink-0 p-2 rounded-xl ${transactionIconClass(tx.type)}`}><TransactionIcon transaction={tx} categories={categories} /></div>
                     <div className="min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{tx.title}</p>
-                    <p className="text-xs text-slate-400">{new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
-                    {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{tx.title}</p>
+                      <p className="text-xs text-slate-400">{new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
+                      {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
                     </div>
                   </div>
                   <span
@@ -320,11 +320,11 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`shrink-0 p-2 rounded-xl ${transactionIconClass(tx.type)}`}><TransactionIcon transaction={tx} categories={categories} /></div>
                     <div className="min-w-0">
-                    <p className="font-medium">{tx.title}</p>
-                    <p className="text-xs text-slate-400">{tx.type} • {new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
-                    {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
-                    {tx.note && <p className="text-xs text-slate-500 mt-1">{tx.note}</p>}
+                      <p className="font-medium">{tx.title}</p>
+                      <p className="text-xs text-slate-400">{tx.type} • {new Date(tx.transaction_date).toLocaleDateString('id-ID')}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{transactionAccountLabel(tx, accounts)}</p>
+                      {tx.type !== 'TRANSFER' && <p className="text-xs text-slate-500 dark:text-slate-400">{transactionCategoryLabel(tx, categories)}</p>}
+                      {tx.note && <p className="text-xs text-slate-500 mt-1">{tx.note}</p>}
                     </div>
                   </div>
                   <div className="text-right">
@@ -403,7 +403,6 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
         transaction={selectedTransaction}
         onSubmitTx={handleSubmitTransaction}
       />
-
       <AccountModal
         key={`account-modal-${accountModalKey}`}
         isOpen={isAccountModalOpen}

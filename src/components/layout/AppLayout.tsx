@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, Wallet, Receipt, Heart } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Wallet, Receipt, Heart, Download } from 'lucide-react';
+import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, showAddTransactionButton = true }: AppLayoutProps) {
+  const [isInstallPromptOpen, setIsInstallPromptOpen] = useState(false);
   const navItems = [
     { id: 'dashboard', href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', href: '/transactions', label: 'Transaksi', icon: ArrowLeftRight },
@@ -44,8 +46,8 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
                 key={item.id}
                 onClick={() => navigateTo(item.id, item.href)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${isActive
-                    ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
               >
                 <Icon size={18} />
@@ -84,6 +86,14 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
             </svg>
             <span>PetaUang Source Code</span>
           </a>
+          <button
+            type="button"
+            onClick={() => setIsInstallPromptOpen(true)}
+            className="cursor-pointer inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition"
+          >
+            <Download size={14} aria-hidden="true" />
+            <span>Install PetaUang</span>
+          </button>
         </footer>
       </main>
 
@@ -106,7 +116,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
           return (
             <button
               key={item.id}
-            onClick={() => navigateTo(item.id, item.href)}
+              onClick={() => navigateTo(item.id, item.href)}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition ${isActive ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400'
                 }`}
             >
@@ -116,6 +126,11 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
           );
         })}
       </nav>
+
+      <PWAInstallPrompt
+        isOpen={isInstallPromptOpen}
+        onClose={() => setIsInstallPromptOpen(false)}
+      />
     </div>
   );
 }
