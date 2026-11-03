@@ -59,4 +59,52 @@ describe('bill lifecycle', () => {
 
     await deleteBill(unpaidId);
   });
+
+  it('creates an expense transaction when paid with paymentDetails and deletes it when marked unpaid', async () => {
+    await db.accounts.add({
+      id: 'acc-bca',
+      name: 'Bank BCA',
+      type: 'BANK',
+      initial_balance: 1_000_000,
+      is_active: true,
+      created_at: '2026-11-01T00:00:00.000Z',
+      updated_at: '2026-11-01T00:00:00.000Z',
+    });
+
+    const billId = await createBill({
+      title: 'Tagihan Listrik',
+      amount: 250_000,
+      due_date: '2026-11-25',
+    });
+
+    // Pay with account
+    await setBillPaid(billId, true, {
+      account_id: 'acc-bca',
+      payment_date: '2026-11-20',
+    });
+
+    const paidBill = await db.bills.get(billId);
+    expect(paidBill?.is_paid).toBe(true);
+    expect(paidBill?.transaction_id).toBeDefined();
+
+    const tx = await db.transactions.get(paidBill!.transaction_id!);
+    expect(tx).toMatchObject({
+      title: 'Tagihan Listrik',
+      type: 'EXPENSE',
+      amount: 250_000,
+      account_id: 'acc-bca',
+    });
+
+    // Mark as unpaid -> should delete transaction & restore ledger
+    await setBillPaid(billId, false);
+
+    const unpaidBill = await db.bills.get(billId);
+    expect(unpaidBill?.is_paid).toBe(false);
+    expect(unpaidBill?.transaction_id).toBeUndefined();
+
+    const deletedTx = await db.transactions.get(paidBill!.transaction_id!);
+    expect(deletedTx).toBeUndefined();
+
+    await deleteBill(billId);
+  });
 });

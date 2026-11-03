@@ -36,8 +36,11 @@ flowchart TD
 2. User membuat bill dengan title, amount, dan due date.
 3. Sistem memvalidasi title, integer amount, dan due date.
 4. Bill baru disimpan dengan `is_paid=false`.
-5. User dapat mengedit, menghapus, atau mengubah status paid/unpaid.
-6. Dashboard menghitung hanya bill unpaid ke dalam Safe-to-Spend.
+5. User menandai bill sebagai paid: sistem membuka dialog konfirmasi pembayaran untuk memilih akun pembayar, tanggal, dan kategori opsional.
+6. Konfirmasi pembayaran secara atomic menandai `is_paid=true`, membuat transaksi `EXPENSE` baru di akun terkait, dan menautkan `transaction_id`.
+7. User mengembalikan bill ke unpaid: sistem meminta konfirmasi, lalu secara atomic menandai `is_paid=false`, menghapus transaksi `EXPENSE` terkait, dan memulihkan saldo akun.
+8. User dapat mengedit atau menghapus bill; jika bill berstatus paid, perubahan/penghapusan diperbarui secara atomic ke transaksi pengeluaran terkait.
+9. Dashboard menghitung hanya bill unpaid ke dalam Safe-to-Spend.
 
 ## 3.2 Flow Category Management
 

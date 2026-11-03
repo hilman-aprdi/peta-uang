@@ -40,11 +40,11 @@ export async function calculateAccountBalance(accountId: string): Promise<number
  * Calculates global Financial Overview for Dashboard:
  * 1. Current Balance (Total active accounts balance)
  * 2. Unpaid Bills Total
- * 3. Safe-To-Spend = Current Balance - Unpaid Bills
+ * 3. Total Allocated Goals (Allocated funds across all non-deleted Goals)
+ * 4. Safe-To-Spend = Current Balance - Unpaid Bills - Total Allocated Goals
  */
 export async function calculateFinancialOverview() {
   const activeAccounts = await db.accounts.filter((acc) => acc.is_active).toArray();
-
 
   let totalCurrentBalance = 0;
   for (const acc of activeAccounts) {
@@ -56,11 +56,16 @@ export async function calculateFinancialOverview() {
   const unpaidBills = await db.bills.filter((bill) => !bill.is_paid).toArray();
   const totalUnpaidBills = unpaidBills.reduce((sum, bill) => sum + bill.amount, 0);
 
-  const safeToSpend = totalCurrentBalance - totalUnpaidBills;
+  // Calculate Total Allocated Goals across all non-deleted Goals (including ACTIVE, COMPLETED, and ARCHIVED)
+  const nonDeletedGoals = await db.goals.filter((g) => !g.is_deleted).toArray();
+  const totalAllocatedGoals = nonDeletedGoals.reduce((sum, g) => sum + g.allocated_amount, 0);
+
+  const safeToSpend = totalCurrentBalance - totalUnpaidBills - totalAllocatedGoals;
 
   return {
     totalCurrentBalance,
     totalUnpaidBills,
+    totalAllocatedGoals,
     safeToSpend,
   };
 }

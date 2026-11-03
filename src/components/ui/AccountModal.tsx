@@ -9,17 +9,22 @@ interface AccountModalProps {
   onClose: () => void;
   mode: 'create' | 'edit';
   account?: Account;
+  currentBalance?: number;
   onSubmitAccount: (data: {
     name: string;
     type: Account['type'];
-    initial_balance: number;
+    balance: number;
   }) => Promise<void>;
 }
 
-export function AccountModal({ isOpen, onClose, mode, account, onSubmitAccount }: AccountModalProps) {
+export function AccountModal({ isOpen, onClose, mode, account, currentBalance, onSubmitAccount }: AccountModalProps) {
   const [name, setName] = useState(account?.name ?? '');
   const [type, setType] = useState<Account['type']>(account?.type ?? 'BANK');
-  const [initialBalance, setInitialBalance] = useState(account ? String(account.initial_balance) : '');
+  const [balance, setBalance] = useState(
+    mode === 'edit'
+      ? (currentBalance !== undefined ? String(currentBalance) : (account ? String(account.initial_balance) : ''))
+      : (account ? String(account.initial_balance) : '')
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -35,13 +40,13 @@ export function AccountModal({ isOpen, onClose, mode, account, onSubmitAccount }
     try {
       setIsSubmitting(true);
       setError('');
-      const balanceNum = Number(initialBalance) || 0;
+      const balanceNum = Number(balance) || 0;
 
       // Tunggu hingga simpan di DB & setIsAccountModalOpen(false) selesai
       await onSubmitAccount({
         name: name.trim(),
         type,
-        initial_balance: balanceNum,
+        balance: balanceNum,
       });
 
       onClose();
@@ -53,8 +58,8 @@ export function AccountModal({ isOpen, onClose, mode, account, onSubmitAccount }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 animate-in zoom-in-95 duration-150">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-bold">{mode === 'edit' ? 'Edit Akun' : 'Tambah Akun Baru'}</h3>
           <button
@@ -95,17 +100,24 @@ export function AccountModal({ isOpen, onClose, mode, account, onSubmitAccount }
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500">Saldo Awal (Rp)</label>
+            <label className="text-xs font-medium text-slate-500">
+              {mode === 'edit' ? 'Saldo Saat Ini (Rp)' : 'Saldo Awal (Rp)'}
+            </label>
             <input
               type="number"
               min="0"
               step="1"
               inputMode="numeric"
               placeholder="0"
-              value={initialBalance}
-              onChange={(e) => setInitialBalance(e.target.value)}
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
               className="w-full text-xl font-mono font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mt-1 focus:ring-2 focus:ring-emerald-500 outline-none"
             />
+            {mode === 'edit' && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                Perubahan saldo akan otomatis dicatat sebagai transaksi penyesuaian (&quot;Adjust Balance&quot;).
+              </p>
+            )}
           </div>
 
           <button

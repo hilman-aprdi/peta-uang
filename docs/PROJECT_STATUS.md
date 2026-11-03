@@ -49,6 +49,8 @@ Source saat audit menyediakan sebagian alur dashboard, akun, transaksi, transfer
 - Account deletion dengan warning dan cascade delete transfer telah tersedia sebagai IPD-017; automated test lulus, acceptance UI masih diperlukan.
 - Cash Flow dashboard tersedia sebagai IPD-018 dan DEC-014: Cash In, Cash Out, dan Net Cash Flow dihitung client-side berdasarkan periode yang dipilih; acceptance UI masih perlu diverifikasi.
 - Kategori optional telah diimplementasikan melalui IPD-019: form menerima kategori kosong, service hanya memvalidasi kategori bila dipilih, dan transaksi tanpa kategori ditampilkan sebagai Uncategorized. Acceptance UI masih perlu diverifikasi.
+- Goals & Pos Alokasi Tabungan telah diimplementasikan lengkap (Phase 1-3): tabel `goals` dan `goal_allocations` di Dexie version 5, integrasi Safe-to-Spend `Current Balance - Unpaid Bills - Total Allocated Goals`, rekonsiliasi belanja atomik, dan over-allocation didukung penuh.
+- Financial Insight Engine telah diimplementasikan lengkap (Phase 1-4): analisis in-memory 3 periode (Harian, Mingguan, Bulanan) deterministik, data sufficiency multi-dimensi, integrasi kartu dashboard reaktif, dan zero database schema changes.
 
 ## 4. Fokus Prioritas
 

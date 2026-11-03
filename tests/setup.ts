@@ -7,4 +7,6 @@ afterEach(async () => {
   await db.accounts.clear();
   await db.categories.clear();
   await db.bills.clear();
+  await db.goals.clear();
+  await db.goal_allocations.clear();
 });

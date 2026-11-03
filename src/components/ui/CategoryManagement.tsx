@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Archive, BadgePercent, Banknote, Baby, Bike, Briefcase, Bus, Car, CircleDollarSign, CircleParking,
+  Archive, BadgePercent, Banknote, Baby, Bike, Briefcase, Bus, Car, ChevronRight, CircleDollarSign, CircleParking,
   Cloud, CloudRain, Coffee, Coins, CreditCard, Dog, Dumbbell, Film, Fuel, Gamepad2, Gift,
   GlassWater, GraduationCap, HandCoins, Heart, Home, Landmark, Laptop, Lightbulb, Mail,
   MoreHorizontal, Music, Phone, Pizza, Plane, Plug, Receipt, Salad, Shirt, ShoppingBag,
   ShoppingCart, Smartphone, Stethoscope, Store, Ticket, TrainFront, TrendingUp, Tv,
   Pencil, Utensils, Wallet, Wifi, Wrench, X,
 } from 'lucide-react';
-import type { Category } from '@/lib/db/schema';
+import type { Category, Transaction } from '@/lib/db/schema';
 import { createCategory, deactivateCategory, updateCategory } from '@/lib/services/categoryService';
 
 const categoryIconOptions = [
@@ -72,9 +72,15 @@ export function CategoryIcon({ name, size = 18 }: { name?: string; size?: number
   return <Icon size={size} aria-hidden="true" />;
 }
 
-interface CategoryManagementProps { categories: Category[]; }
+interface CategoryManagementProps {
+  categories: Category[];
+  transactions?: Transaction[];
+  selectedPeriod?: string;
+  onPeriodChange?: (newPeriod: string) => void;
+  variant?: 'summary' | 'strip';
+}
 
-export function CategoryManagement({ categories }: CategoryManagementProps) {
+export function CategoryManagement({ categories, transactions = [], selectedPeriod, onPeriodChange, variant = 'summary' }: CategoryManagementProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<Category['type']>('EXPENSE');
   const [icon, setIcon] = useState('circle-dollar-sign');
@@ -82,6 +88,19 @@ export function CategoryManagement({ categories }: CategoryManagementProps) {
   const [error, setError] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+  const [internalMonth, setInternalMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const activePeriod = selectedPeriod || internalMonth;
+  const handleMonthChange = (val: string) => {
+    if (onPeriodChange) {
+      onPeriodChange(val);
+    } else {
+      setInternalMonth(val);
+    }
+  };
 
   const resetForm = () => { setName(''); setType('EXPENSE'); setIcon('circle-dollar-sign'); setEditingId(undefined); setIsIconPickerOpen(false); };
   const closeModal = () => { setIsOpen(false); resetForm(); setError(''); };
@@ -106,21 +125,66 @@ export function CategoryManagement({ categories }: CategoryManagementProps) {
 
   const activeCategories = categories.filter((category) => category.is_active !== false);
 
+  // Filter transactions by selected month (YYYY-MM) and exclude transfers
+  const filteredTx = transactions.filter(
+    (tx) => tx.type !== 'TRANSFER' && tx.category_id && tx.transaction_date.slice(0, 7) === activePeriod,
+  );
+
+  const categoryTotals = filteredTx.reduce<Record<string, number>>((acc, tx) => {
+    const catId = tx.category_id!;
+    acc[catId] = (acc[catId] || 0) + tx.amount;
+    return acc;
+  }, {});
+
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} className="w-full flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-left hover:border-emerald-400 transition">
-        <span><span className="block font-semibold">Kelola Kategori</span><span className="block text-xs text-slate-500 mt-1">Atur kategori transaksi dan ikon.</span></span>
-        <span className="text-emerald-600 text-sm font-semibold">Buka</span>
-      </button>
+      {variant === 'strip' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="md:hidden flex w-full items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-xl text-xs text-slate-300 hover:border-emerald-600 transition"
+        >
+          <span className="font-medium">Kelola Kategori</span>
+          <span className="flex items-center gap-1 font-semibold text-emerald-400">
+            Buka
+            <ChevronRight size={14} />
+          </span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="hidden md:flex h-full w-full items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-left hover:border-emerald-600 transition"
+        >
+          <span className="min-w-0">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kategori</span>
+            <span className="mt-1 block text-sm font-bold text-slate-100">Kelola Kategori</span>
+          </span>
+          <ChevronRight size={16} className="shrink-0 text-emerald-400" />
+        </button>
+      )}
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-5">
             <div className="flex justify-between items-center">
               <div><h3 id="category-modal-title" className="font-semibold">Kelola Kategori</h3><p className="text-xs text-slate-500 mt-1">Kategori default dan custom dapat diedit atau dinonaktifkan.</p></div>
               <button type="button" onClick={closeModal} className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" aria-label="Tutup modal"><X size={20} /></button>
             </div>
 
+            {/* Month filter */}
+            <div className="flex items-center gap-2 mb-4">
+              <label htmlFor="category-month-filter" className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                Filter Bulan
+              </label>
+              <input
+                id="category-month-filter"
+                type="month"
+                value={activePeriod}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                className="text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2 outline-none"
+              />
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
               <div className="grid grid-cols-1 md:grid-cols-[1fr_160px] gap-2">
@@ -140,7 +204,61 @@ export function CategoryManagement({ categories }: CategoryManagementProps) {
             </form>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-              {(['EXPENSE', 'INCOME'] as const).map((categoryType) => <div key={categoryType} className="space-y-2"><h4 className="text-xs font-semibold text-slate-500">{categoryType === 'EXPENSE' ? 'Expense' : 'Income'}</h4>{activeCategories.filter((category) => category.type === categoryType).map((category) => <div key={category.id} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 py-2"><span className="flex items-center gap-2 text-sm"><span className="text-emerald-600"><CategoryIcon name={category.icon} /></span>{category.name}</span><div className="flex gap-3"><button type="button" onClick={() => { setEditingId(category.id); setName(category.name); setType(category.type); setIcon(category.icon ?? 'circle-dollar-sign'); }} title="Edit kategori" aria-label={`Edit kategori ${category.name}`} className="text-emerald-600 hover:text-emerald-700"><Pencil size={16} /></button><button type="button" onClick={() => handleDeactivate(category)} title="Nonaktifkan kategori" aria-label={`Nonaktifkan kategori ${category.name}`} className="text-red-600 hover:text-red-700"><Archive size={16} /></button></div></div>)}</div>)}
+              {(['EXPENSE', 'INCOME'] as const).map((categoryType) => (
+                <div key={categoryType} className="space-y-2">
+                  <h4 className="text-xs font-semibold text-slate-500">
+                    {categoryType === 'EXPENSE' ? 'Expense' : 'Income'}
+                  </h4>
+                  {activeCategories
+                    .filter((category) => category.type === categoryType)
+                    .map((category) => {
+                      const total = categoryTotals[category.id] || 0;
+                      return (
+                        <div
+                          key={category.id}
+                          className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 py-2.5 gap-2"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                              <CategoryIcon name={category.icon} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium leading-tight truncate">{category.name}</p>
+                              <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                                Rp {total.toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingId(category.id);
+                                setName(category.name);
+                                setType(category.type);
+                                setIcon(category.icon ?? 'circle-dollar-sign');
+                              }}
+                              title="Edit kategori"
+                              aria-label={`Edit kategori ${category.name}`}
+                              className="p-1.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeactivate(category)}
+                              title="Nonaktifkan kategori"
+                              aria-label={`Nonaktifkan kategori ${category.name}`}
+                              className="p-1.5 text-slate-500 hover:text-red-600 transition"
+                            >
+                              <Archive size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              ))}
             </div>
           </div>
         </div>

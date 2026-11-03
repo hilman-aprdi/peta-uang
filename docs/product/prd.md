@@ -131,6 +131,8 @@ Transaksi `TRANSFER` dikecualikan karena hanya memindahkan dana di antara accoun
 - Due date wajib valid.
 - Tagihan baru berstatus unpaid secara default.
 - Pengguna dapat mengubah status tagihan menjadi paid atau unpaid.
+- Saat ditandai paid, pengguna memilih akun pembayaran dan sistem otomatis membuat transaksi EXPENSE terkait yang memotong saldo riil akun.
+- Saat ditandai unpaid kembali, transaksi EXPENSE terkait otomatis dihapus dan saldo akun dikembalikan.
 - Hanya tagihan unpaid yang dikurangi dari Safe-to-Spend.
 
 ### CSV

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { db } from '@/lib/db/schema';
 import { calculateAccountBalance, calculateFinancialOverview } from '@/lib/finance/calculator';
-import { softDeleteAccount } from '@/lib/services/accountService';
+import { getAccountBalance, softDeleteAccount, updateAccount } from '@/lib/services/accountService';
 
 const account = (id: string, initial_balance: number, is_active = true) => ({
   id,
@@ -48,6 +48,7 @@ describe('financial calculations', () => {
     await expect(calculateFinancialOverview()).resolves.toEqual({
       totalCurrentBalance: 100_000,
       totalUnpaidBills: 25_000,
+      totalAllocatedGoals: 0,
       safeToSpend: 75_000,
     });
   });
@@ -74,5 +75,36 @@ describe('financial calculations', () => {
     await expect(db.transactions.where('type').equals('TRANSFER').count()).resolves.toBe(0);
     await expect(db.transactions.where('type').equals('INCOME').count()).resolves.toBe(1);
     await expect(db.transactions.where('type').equals('EXPENSE').count()).resolves.toBe(1);
+  });
+
+  it('adjusts account balance by generating Adjust Balance transaction and restores upon deletion', async () => {
+    await db.accounts.add(account('acc-adjust', 100_000));
+    expect(await getAccountBalance('acc-adjust')).toBe(100_000);
+
+    // Naikan saldo menjadi 150_000 -> harus buat transaksi INCOME 'Adjust Balance' 50_000
+    await updateAccount('acc-adjust', { target_balance: 150_000 });
+    expect(await getAccountBalance('acc-adjust')).toBe(150_000);
+
+    const incomeAdj = await db.transactions.where({ account_id: 'acc-adjust', title: 'Adjust Balance' }).first();
+    expect(incomeAdj).toBeDefined();
+    expect(incomeAdj?.type).toBe('INCOME');
+    expect(incomeAdj?.amount).toBe(50_000);
+
+    // Hapus transaksi penyesuaian -> saldo kembali ke 100_000 (initial_balance)
+    await db.transactions.delete(incomeAdj!.id);
+    expect(await getAccountBalance('acc-adjust')).toBe(100_000);
+
+    // Turunkan saldo menjadi 80_000 -> harus buat transaksi EXPENSE 'Adjust Balance' 20_000
+    await updateAccount('acc-adjust', { target_balance: 80_000 });
+    expect(await getAccountBalance('acc-adjust')).toBe(80_000);
+
+    const expenseAdj = await db.transactions.where({ account_id: 'acc-adjust', title: 'Adjust Balance' }).first();
+    expect(expenseAdj).toBeDefined();
+    expect(expenseAdj?.type).toBe('EXPENSE');
+    expect(expenseAdj?.amount).toBe(20_000);
+
+    // Hapus transaksi penyesuaian -> saldo kembali ke 100_000
+    await db.transactions.delete(expenseAdj!.id);
+    expect(await getAccountBalance('acc-adjust')).toBe(100_000);
   });
 });

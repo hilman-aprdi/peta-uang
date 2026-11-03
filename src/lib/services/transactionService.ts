@@ -1,5 +1,9 @@
 import { db } from '@/lib/db/schema';
 import { runAtomicTransaction } from '@/lib/db/transactionHelper';
+import {
+  reconcileGoalOnTransactionDelete,
+  reconcileGoalOnTransactionUpdate,
+} from '@/lib/services/goalService';
 
 type IncomeExpenseData = {
   title: string;
@@ -7,6 +11,7 @@ type IncomeExpenseData = {
   amount: number;
   account_id: string;
   category_id?: string;
+  goal_id?: string;
   transaction_date: string;
   note?: string;
 };
@@ -41,7 +46,19 @@ export async function addTransaction(data: IncomeExpenseData): Promise<string> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  await runAtomicTransaction(['transactions', 'accounts'], async () => {
+  await runAtomicTransaction(['transactions', 'accounts', 'goals', 'goal_allocations'], async () => {
+    // If user explicitly attaches a goal_id during creation
+    if (transaction.goal_id) {
+      if (transaction.type !== 'EXPENSE') {
+        throw new Error('Hanya transaksi pengeluaran (EXPENSE) yang dapat dikaitkan dengan target tabungan');
+      }
+      await reconcileGoalOnTransactionUpdate(
+        { goal_id: undefined, amount: 0, type: 'EXPENSE' },
+        { goal_id: transaction.goal_id, amount: transaction.amount, type: 'EXPENSE' },
+        id
+      );
+    }
+
     await db.transactions.add({
       id,
       title: transaction.title,
@@ -49,6 +66,7 @@ export async function addTransaction(data: IncomeExpenseData): Promise<string> {
       amount: transaction.amount,
       account_id: transaction.account_id,
       category_id: transaction.category_id,
+      goal_id: transaction.goal_id,
       transaction_date: transaction.transaction_date,
       note: transaction.note,
       created_at: now,
@@ -76,12 +94,21 @@ export async function updateTransaction(id: string, data: IncomeExpenseData): Pr
     }
   }
 
-  await runAtomicTransaction(['transactions', 'accounts'], async () => {
+  await runAtomicTransaction(['transactions', 'accounts', 'goals', 'goal_allocations'], async () => {
+    // Reconcile goal if goal_id or amount changed
+    const targetGoalId = transaction.goal_id !== undefined ? transaction.goal_id : existing.goal_id;
+    await reconcileGoalOnTransactionUpdate(
+      { goal_id: existing.goal_id, amount: existing.amount, type: existing.type },
+      { goal_id: targetGoalId, amount: transaction.amount, type: transaction.type },
+      id
+    );
+
     await db.transactions.update(id, {
       title: transaction.title,
       amount: transaction.amount,
       account_id: transaction.account_id,
       category_id: transaction.category_id,
+      goal_id: targetGoalId,
       transaction_date: transaction.transaction_date,
       note: transaction.note,
       updated_at: new Date().toISOString(),
@@ -94,7 +121,11 @@ export async function deleteTransaction(id: string): Promise<void> {
   if (!existing) throw new Error('Transaksi tidak ditemukan');
   if (existing.type === 'TRANSFER') throw new Error('Transfer tidak dapat dihapus melalui flow income/expense');
 
-  await runAtomicTransaction(['transactions', 'accounts'], async () => {
+  await runAtomicTransaction(['transactions', 'accounts', 'goals', 'goal_allocations'], async () => {
+    // If this transaction was linked to a Goal, refund the amount back to Goal's allocated_amount
+    if (existing.goal_id) {
+      await reconcileGoalOnTransactionDelete(existing, id);
+    }
     await db.transactions.delete(id);
   });
 }

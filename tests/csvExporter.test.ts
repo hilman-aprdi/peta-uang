@@ -42,6 +42,7 @@ describe('CSV export', () => {
     expect(csv).toContain('transfer,2026-11-01T00:00:00.000Z,TRANSFER,,10000,Bank BCA,Kas,Transfer Antar Akun');
 
     const anchor = document.createElement('a') as unknown as { download: string };
-    expect(anchor.download).toBe('PetaUang_All_Transactions_2026-11-02.csv');
+    const expectedDate = new Date().toISOString().split('T')[0];
+    expect(anchor.download).toBe(`PetaUang_All_Transactions_${expectedDate}.csv`);
   });
 });

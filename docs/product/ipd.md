@@ -91,7 +91,7 @@ Pemeriksaan akun, saldo sumber, dan penyimpanan transfer dilakukan dalam satu op
 
 ### IPD-016 — Bill Management
 
-Bill Management memungkinkan pengguna menambah, mengubah, menghapus, dan menandai bill sebagai paid atau unpaid melalui `/bills`. Validasi mencakup judul wajib, nominal integer lebih besar dari nol, dan due date valid. Bill baru berstatus unpaid dan hanya bill unpaid yang dikurangi dari Safe-to-Spend. Route `/settings` dipertahankan sebagai alias kompatibilitas lama. Acceptance test manual untuk seluruh lifecycle bill dan pengaruhnya terhadap Safe-to-Spend masih diperlukan sebelum status dinaikkan menjadi `Verified`.
+Bill Management memungkinkan pengguna menambah, mengubah, menghapus, dan menandai bill sebagai paid atau unpaid melalui `/bills`. Validasi mencakup judul wajib, nominal integer lebih besar dari nol, dan due date valid. Bill baru berstatus unpaid dan hanya bill unpaid yang dikurangi dari Safe-to-Spend. Menandai paid memicu dialog pembayaran akun dan secara atomic membuat transaksi `EXPENSE` baru yang menautkan `transaction_id`. Mengubah status kembali ke unpaid secara atomic menghapus transaksi `EXPENSE` terkait dan memulihkan saldo akun. Route `/settings` dipertahankan sebagai alias kompatibilitas lama. Acceptance test manual untuk seluruh lifecycle bill dan pengaruhnya terhadap Safe-to-Spend masih diperlukan sebelum status dinaikkan menjadi `Verified`.
 
 ### IPD-009 — CSV
 

@@ -122,6 +122,42 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 - **Consequences:** Form dan service transaksi perlu menerima kategori kosong; daftar transaksi dan tampilan terkait harus menampilkan fallback `Uncategorized`. Tidak perlu schema baru karena `category_id` sudah nullable. Seed tidak boleh membatalkan perubahan kategori default oleh pengguna.
 - **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
 
+## DEC-016 — Bill Payment to Expense Integration & Cascade Unpaid
+
+- **Status:** Accepted
+- **Context:** Owner menetapkan bahwa ketika user menandai tagihan sebagai paid, saldo riil akun harus berkurang otomatis melalui pencatatan transaksi expense baru, dan jika diubah kembali ke unpaid, transaksi expense terkait otomatis dihapus.
+- **Decision:** Menandai tagihan sebagai paid membuka modal konfirmasi untuk memilih akun pembayar (`account_id`), tanggal bayar, dan kategori opsional. Sistem secara atomic menandai `is_paid = true`, membuat transaksi `EXPENSE` baru, dan menyimpan referensi `transaction_id` pada tagihan. Jika tagihan diubah kembali menjadi unpaid (`is_paid = false`), transaksi `EXPENSE` terkait otomatis dihapus secara atomic dan saldo ledger akun dikembalikan.
+- **Consequences:** Tabel `bills` memiliki field opsional `transaction_id`. Service `billService` dan antarmuka `BillManagement` menyediakan modal `PayBillModal` untuk memilih akun pembayar serta dialog konfirmasi saat unmark paid.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS.
+
+## DEC-017 — Current Balance Adjustment via Auto-Generated Transaction
+
+- **Status:** Accepted
+- **Context:** Form edit akun sebelumnya menampilkan input "Saldo Awal", yang jika diubah secara langsung dapat merusak catatan historis `initial_balance`. Diperlukan cara agar pengguna dapat memperbarui saldo akun ke kondisi riil saat ini (Saldo Saat Ini) secara fleksibel tanpa merusak integritas ledger.
+- **Decision:** Pada modal edit akun, input saldo diubah labelnya menjadi "Saldo Saat Ini (Rp)" dan menampilkan saldo aktual ledger akun. Jika pengguna memasukkan nominal target yang berbeda dari saldo saat ini:
+  1. `initial_balance` akun tetap dipertahankan (tidak diubah).
+  2. Selisih $\Delta = \text{target\_balance} - \text{current\_balance}$ dihitung.
+  3. Jika $\Delta > 0$, sistem secara otomatis membuat transaksi baru bertipe `INCOME` dengan judul `"Adjust Balance"` sejumlah $\Delta$.
+  4. Jika $\Delta < 0$, sistem secara otomatis membuat transaksi baru bertipe `EXPENSE` dengan judul `"Adjust Balance"` sejumlah $|\Delta|$.
+  5. Jika transaksi penyesuaian `"Adjust Balance"` tersebut dihapus oleh pengguna dari riwayat transaksi, saldo akun otomatis kembali ke nilai semula karena transaksi penyesuaian tereliminasi dari kalkulasi ledger.
+- **Consequences:** `updateAccount` di `accountService` mendukung `target_balance` dan dieksekusi secara atomic (`runAtomicTransaction`). Modal edit akun menampilkan petunjuk eksplisit mengenai pencatatan transaksi penyesuaian.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS.
+
+## DEC-018 — Goals Feature & Virtual Fund Allocation in Safe-to-Spend
+
+- **Status:** Accepted
+- **Context:** Pengguna membutuhkan kemampuan membuat target tabungan/pos alokasi dana khusus (misal: "Dana Darurat", "Beli Laptop") tanpa membuat rekening bank fisik baru dan tanpa mengubah saldo kas riil.
+- **Decision:**
+  1. Pos Goal diperlakukan sebagai virtual fund allocation, disimpan dalam tabel Dexie `goals` dan riwayat `goal_allocations`.
+  2. Formula Safe-to-Spend diperbarui: `Safe-to-Spend = Current Balance - Unpaid Bills - Total Allocated Goals`.
+  3. Alokasi dana mengurangi Safe-to-Spend tanpa mengubah saldo kas riil. Penarikan dana mengembalikan Safe-to-Spend.
+  4. Pembelanjaan dari Goal (`spendFromGoal`) mencatat transaksi `EXPENSE` riil dari akun rekening yang dipilih dan mengurangi alokasi Goal secara bersamaan. Safe-to-Spend tidak mengalami pemotongan ganda.
+  5. Pengeditan dan penghapusan transaksi yang terikat Goal merekonsiliasi alokasi dana dan mencatat event penyesuaian (`SPEND_ADJUSTMENT`) atau pembalikan (`SPEND_REVERSAL`) secara atomik.
+  6. Goal yang masih memiliki sisa dana alokasi tidak dapat dihapus atau diarsipkan sebelum seluruh dananya ditarik. Penghapusan Goal yang dananya kosong menggunakan soft-delete untuk menjaga keutuhan riwayat audit.
+  7. Modul Target menjadi item navigasi utama ke-5 (`/goals`).
+- **Consequences:** Dexie ditingkatkan ke `version(5)`. Komponen `SafeToSpendHero` menampilkan breakdown dana pos target. Modul `/goals` menyediakan manajemen target, alokasi, penarikan, pembelanjaan, dan riwayat mutasi pos dana.
+- **Affected documents:** PRD, BSD, AFD, TRD, IPD, PROJECT_STATUS, PRODUCT_ROADMAP.
+
 ## Lampiran A — Matriks Rekonsiliasi
 
 | Issue | Dokumentasi terdampak | Baseline | Verifikasi |
@@ -139,3 +175,6 @@ Decision log ini mencatat baseline yang diterima untuk rekonsiliasi dokumentasi 
 | Account deletion cascade | PRD, BSD, AFD, TRD, IPD | Soft-delete account dengan warning; hapus transfer terkait secara atomic | Income/expense tetap dipertahankan |
 | Dashboard Cash Flow | PRD, BSD, AFD, TRD, IPD | Income minus expense dalam periode terpilih; transfer dikecualikan | Client-side aggregate, tanpa schema/API |
 | Optional category | PRD, BSD, AFD, TRD, IPD | Income/expense tanpa kategori disimpan dengan category_id kosong dan ditampilkan Uncategorized | CRUD kategori custom dengan soft-delete |
+| Bill Payment Integration | PRD, BSD, AFD, TRD, IPD | Paid membuat EXPENSE atomic & simpan transaction_id; unpaid menghapus EXPENSE terkait | Otomasi mutasi kas saat tagihan dibayar |
+| Current Balance Adjustment | PRD, BSD, AFD, TRD, IPD | Edit akun memakai input Saldo Saat Ini; selisih dicatat sebagai transaksi Adjust Balance (INCOME/EXPENSE) tanpa mengubah initial_balance | Menghapus transaksi Adjust Balance mengembalikan saldo ke semula |
+| Goals & Virtual Fund Allocation | PRD, BSD, AFD, TRD, IPD | Safe-to-Spend = Current Balance - Unpaid Bills - Total Allocated Goals; full allocation audit history | SpendFromGoal atomik dan rekonsiliasi edit/delete transaksi |

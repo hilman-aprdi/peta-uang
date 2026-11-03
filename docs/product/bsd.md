@@ -58,6 +58,7 @@ Saldo akun adalah nilai ledger yang dihitung dari `initial_balance` dan seluruh 
 | `amount` | integer | Rupiah utuh, lebih besar dari 0 |
 | `due_date` | timestamp | Wajib |
 | `is_paid` | boolean | Default false |
+| `transaction_id` | string nullable | ID transaksi EXPENSE terkait jika tagihan telah dilunasi |
 | `created_at` | timestamp | Wajib |
 
 `budgets` dan Goal Allocations tidak termasuk model Safe-to-Spend MVP. Keduanya ditunda sampai memiliki keputusan produk dan schema yang disetujui.
@@ -86,6 +87,7 @@ Saldo akun adalah nilai ledger yang dihitung dari `initial_balance` dan seluruh 
 20. Kategori bersifat opsional untuk income dan expense.
 21. Transaksi income/expense tanpa `category_id` ditampilkan sebagai `Uncategorized`; status ini bukan record kategori.
 22. Kategori default dan custom mendukung CRUD. Delete dilakukan sebagai soft-delete/nonaktifkan agar transaksi historis tetap terhubung.
+23. Saat bill ditandai lunas (paid), sistem secara atomic membuat transaksi `EXPENSE` baru pada akun yang dipilih dan menautkan `transaction_id`. Jika status bill dikembalikan ke unpaid, transaksi `EXPENSE` terkait dihapus secara atomic dan saldo ledger akun dikembalikan.
 
 ## 4. Perhitungan Ledger
 

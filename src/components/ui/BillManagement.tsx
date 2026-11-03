@@ -6,11 +6,14 @@ import type { Bill } from '@/lib/db/schema';
 import { db } from '@/lib/db/schema';
 import { createBill, deleteBill, setBillPaid, updateBill } from '@/lib/services/billService';
 import { BillModal } from '@/components/ui/BillModal';
+import { PayBillModal } from '@/components/ui/PayBillModal';
 import { CheckCircle2, Circle, Pencil, Trash2 } from 'lucide-react';
 
 export function BillManagement() {
   const bills = useLiveQuery(() => db.bills.orderBy('due_date').toArray(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [billToPay, setBillToPay] = useState<Bill>();
   const [mode, setMode] = useState<'create' | 'edit'>('create');
   const [selectedBill, setSelectedBill] = useState<Bill>();
   const [modalKey, setModalKey] = useState(0);
@@ -48,10 +51,23 @@ export function BillManagement() {
   const handleTogglePaid = async (bill: Bill) => {
     try {
       setError('');
-      await setBillPaid(bill.id, !bill.is_paid);
+      if (!bill.is_paid) {
+        setBillToPay(bill);
+        setIsPayModalOpen(true);
+      } else {
+        if (!window.confirm(`Kembalikan status tagihan "${bill.title}" menjadi Belum Lunas? Transaksi pengeluaran terkait akan otomatis dihapus.`)) {
+          return;
+        }
+        await setBillPaid(bill.id, false);
+      }
     } catch (toggleError) {
       setError(toggleError instanceof Error ? toggleError.message : 'Gagal mengubah status tagihan');
     }
+  };
+
+  const handleConfirmPay = async (paymentDetails: { account_id: string; payment_date: string; category_id?: string }) => {
+    if (!billToPay) return;
+    await setBillPaid(billToPay.id, true, paymentDetails);
   };
 
   return (
@@ -104,6 +120,13 @@ export function BillManagement() {
         bill={selectedBill}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
+      />
+
+      <PayBillModal
+        isOpen={isPayModalOpen}
+        bill={billToPay}
+        onClose={() => setIsPayModalOpen(false)}
+        onConfirm={handleConfirmPay}
       />
     </section>
   );

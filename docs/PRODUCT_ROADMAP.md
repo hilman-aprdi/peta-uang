@@ -45,7 +45,7 @@ Setelah stabilisasi MVP, pekerjaan dapat mencakup penyempurnaan UX, pencarian tr
 
 Bill Management diimplementasikan sebagai IPD-016 dan menunggu acceptance verification.
 
-Goal Allocations, Local PIN Protection, sinkronisasi cloud, dan integrasi bank tetap ditunda di luar MVP.
+Goal Allocations telah diimplementasikan penuh sebagai fitur Pos Target Tabungan dengan alokasi virtual dan integrasi Safe-to-Spend. Financial Insight Engine telah diimplementasikan penuh untuk wawasan otomatis 3 periode (Harian, Mingguan, Bulanan). Local PIN Protection, sinkronisasi cloud, dan integrasi bank tetap ditunda di luar MVP.
 
 ## 5. Kriteria Masuk Fase Berikutnya
 

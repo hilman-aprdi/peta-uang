@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, Wallet, Receipt, Heart, Download } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Wallet, Receipt, Target, Heart, Download, Plus } from 'lucide-react';
 import { PWAInstallPrompt } from '@/components/pwa/PWAInstallPrompt';
 
 interface AppLayoutProps {
@@ -20,6 +20,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
     { id: 'transactions', href: '/transactions', label: 'Transaksi', icon: ArrowLeftRight },
     { id: 'accounts', href: '/accounts', label: 'Dompet', icon: Wallet },
     { id: 'bills', href: '/bills', label: 'Tagihan', icon: Receipt },
+    { id: 'goals', href: '/goals', label: 'Target', icon: Target },
   ];
   const router = useRouter();
 
@@ -30,11 +31,14 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col md:flex-row font-sans">
-      {/* Sidebar - Desktop Only */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 space-y-8">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">PetaUang</h1>
-          <p className="text-xs text-slate-500 mt-1">Local-First PWA</p>
+      {/* Sidebar - Tablet: icon-only, Desktop: full */}
+      <aside className="hidden md:flex flex-col md:w-20 lg:w-72 fixed inset-y-0 left-0 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 md:p-4 lg:p-6 space-y-6 lg:space-y-8 overflow-y-auto">
+        <div className="flex items-center justify-center lg:justify-start">
+          <div className="lg:hidden w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0">P</div>
+          <div className="hidden lg:block">
+            <h1 className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">PetaUang</h1>
+            <p className="text-xs text-slate-500 mt-1">Local-First PWA</p>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -45,13 +49,13 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
               <button
                 key={item.id}
                 onClick={() => navigateTo(item.id, item.href)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${isActive
+                className={`w-full flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${isActive
                   ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
               >
                 <Icon size={18} />
-                {item.label}
+                <span className="hidden lg:inline">{item.label}</span>
               </button>
             );
           })}
@@ -60,16 +64,19 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
         {showAddTransactionButton && (
           <button
             onClick={onOpenAddModal}
-            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition shadow-sm"
+            aria-label="Buka modal transaksi baru"
+            className="w-11 h-11 lg:w-full lg:h-auto flex items-center justify-center gap-2 lg:px-4 lg:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl lg:rounded-lg font-medium text-sm transition shadow-sm"
           >
-            + Transaksi Baru
+            <Plus size={18} />
+            <span className="hidden lg:inline">Transaksi Baru</span>
           </button>
         )}
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-24 md:pb-8 p-4 md:p-8 max-w-4xl mx-auto w-full flex flex-col">
-        {children}
+      <main className="flex-1 pb-24 md:pb-8 md:ml-28 lg:ml-80 flex flex-col">
+        <div className="mx-auto w-full max-w-6xl px-5 pt-6 sm:px-6 md:px-8 md:pt-8 flex-1 flex flex-col">
+          {children}
         <footer className="mt-auto pt-10 pb-2 flex flex-col items-center gap-2 text-xs text-slate-500">
           <p className="inline-flex items-center gap-1.5">
             Made with <Heart size={14} className="fill-rose-500 text-rose-500" aria-label="love" />
@@ -95,6 +102,7 @@ export function AppLayout({ children, activeTab, setActiveTab, onOpenAddModal, s
             <span>Install PetaUang</span>
           </button>
         </footer>
+        </div>
       </main>
 
       {/* Floating Action Button (FAB) - Mobile Only */}
