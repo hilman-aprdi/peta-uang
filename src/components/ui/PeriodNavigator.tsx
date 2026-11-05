@@ -77,10 +77,10 @@ export function PeriodNavigator({
         {allowAllTime && (
           <button
             type="button"
-            onClick={() => onPeriodChange(ALL_TIME_PERIOD)}
+            onClick={() => onPeriodChange(isAllTime ? currentPeriod : ALL_TIME_PERIOD)}
             aria-pressed={isAllTime}
-            aria-label="Tampilkan semua waktu"
-            title={isAllTime ? 'Mode semua waktu aktif' : 'Tampilkan semua waktu'}
+            aria-label={isAllTime ? 'Matikan mode semua waktu' : 'Tampilkan semua waktu'}
+            title={isAllTime ? 'Matikan mode semua waktu' : 'Tampilkan semua waktu'}
             className={`flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg border px-2.5 text-[11px] font-semibold transition ${
               isAllTime
                 ? 'border-emerald-600 bg-emerald-500/10 text-emerald-400'

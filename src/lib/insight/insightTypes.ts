@@ -9,15 +9,29 @@ export type InsightUrgency = 'CRITICAL' | 'WARNING' | 'OPPORTUNITY' | 'HYGIENE' 
 
 export type InsightActionTarget = 'transactions' | 'bills' | 'goals';
 
+/**
+ * Domain masalah yang menjadi identitas item di Priority Inbox.
+ * Severity tetap menjadi badge, sedangkan periode menjadi metadata kecil.
+ */
+export type InsightDomain = 'SALDO' | 'TAGIHAN' | 'PENGELUARAN' | 'TARGET' | 'DATA';
+
+export interface InsightEvidenceItem {
+  label: string;
+  value: string;
+}
+
 export interface InsightEvidence {
   currentValue: string;
   previousValue?: string;
   diff?: string;
+  /** Rincian terstruktur untuk evidence yang memiliki lebih dari dua komponen. */
+  breakdown?: InsightEvidenceItem[];
 }
 
 export interface FinancialInsight {
   id: string;
   periodType: InsightPeriodType;
+  domain: InsightDomain;
   urgency: InsightUrgency;
   title: string;
   observation: string;
@@ -32,7 +46,10 @@ export interface FinancialInsight {
 export interface PeriodInsightResult {
   periodType: InsightPeriodType;
   state: InsightResultState;
+  /** Kandidat dengan prioritas tertinggi untuk kompatibilitas tampilan lama. */
   insight?: FinancialInsight;
+  /** Seluruh kandidat periode, sudah diurutkan dari yang paling mendesak. */
+  insights?: FinancialInsight[];
   fallbackMessage?: string;
 }
 

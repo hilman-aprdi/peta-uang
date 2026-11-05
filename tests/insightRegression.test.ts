@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Account, Category, Goal, Transaction, Bill } from '@/lib/db/schema';
+import type { Account, Category, Goal, Transaction } from '@/lib/db/schema';
 import { evaluateAllInsights } from '@/lib/insight/insightEngine';
 import type { InsightEngineInput } from '@/lib/insight/insightTypes';
 
@@ -51,11 +51,11 @@ describe('Phase 4: Full Verification, Regression & Empirical Profiling', () => {
       createTx('tx-p2', 'EXPENSE', 150_000, '2026-10-10T10:00:00.000Z', 'cat-food'),
     ];
 
-    // Kondisi 1: Belanja bulan ini baru Rp320.000 (+6.6%, selisih Rp20.000) -> Belum lonjakan
+    // Kondisi 1: Belanja bulan ini Rp280.000, masih di bawah total penuh bulan lalu Rp300.000
     const currentTxsInitial: Transaction[] = [
-      createTx('tx-c1', 'EXPENSE', 160_000, '2026-11-05T10:00:00.000Z', 'cat-food'),
-      createTx('tx-c2', 'EXPENSE', 160_000, '2026-11-10T10:00:00.000Z', 'cat-food'),
-      createTx('tx-c3', 'EXPENSE', 50_000, '2026-11-12T10:00:00.000Z', 'cat-food'),
+      createTx('tx-c1', 'EXPENSE', 120_000, '2026-11-05T10:00:00.000Z', 'cat-food'),
+      createTx('tx-c2', 'EXPENSE', 80_000, '2026-11-10T10:00:00.000Z', 'cat-food'),
+      createTx('tx-c3', 'EXPENSE', 80_000, '2026-11-12T10:00:00.000Z', 'cat-food'),
     ];
 
     const inputInitial: InsightEngineInput = {
@@ -76,7 +76,7 @@ describe('Phase 4: Full Verification, Regression & Empirical Profiling', () => {
     const resInitial = evaluateAllInsights(inputInitial);
     expect(resInitial.monthly.insight?.id ?? '').not.toContain('monthly-category-surge');
 
-    // Kondisi 2: Transaksi diedit menjadi Rp600.000 total (+100%, selisih Rp300.000) -> Memicu SURGE
+    // Kondisi 2: Transaksi diedit menjadi Rp650.000, melebihi total penuh bulan lalu -> Memicu perbandingan
     const currentTxsEdited: Transaction[] = [
       createTx('tx-c1', 'EXPENSE', 300_000, '2026-11-05T10:00:00.000Z', 'cat-food'),
       createTx('tx-c2', 'EXPENSE', 300_000, '2026-11-10T10:00:00.000Z', 'cat-food'),
@@ -124,15 +124,25 @@ describe('Phase 4: Full Verification, Regression & Empirical Profiling', () => {
     expect(resBefore.weekly.state).toBe('INSIGHT_AVAILABLE');
     expect(resBefore.weekly.insight?.id).toBe('weekly-uncategorized-expenses');
 
-    // Hapus 1 transaksi sehingga sisa 2 transaksi -> Otomatis insight hilang
+    // Hapus 1 transaksi sehingga sisa 2 transaksi -> Peringatan tetap ada dengan jumlah terbaru
     const inputAfterDeletion: InsightEngineInput = {
       ...inputWith3Uncat,
       transactions: [uncategorizedTxs[0], uncategorizedTxs[1]],
     };
 
-    const resAfter = evaluateAllInsights(inputAfterDeletion);
-    expect(resAfter.weekly.state).toBe('NO_SIGNIFICANT_FINDING');
-    expect(resAfter.weekly.insight).toBeUndefined();
+    const resAfterOneDeletion = evaluateAllInsights(inputAfterDeletion);
+    expect(resAfterOneDeletion.weekly.state).toBe('INSIGHT_AVAILABLE');
+    expect(resAfterOneDeletion.weekly.insight?.id).toBe('weekly-uncategorized-expenses');
+    expect(resAfterOneDeletion.weekly.insight?.observation).toContain('2 transaksi');
+
+    // Hapus seluruh transaksi tanpa kategori -> Insight hilang
+    const resAfterAllDeleted = evaluateAllInsights({
+      ...inputWith3Uncat,
+      transactions: [],
+    });
+
+    expect(resAfterAllDeleted.weekly.state).toBe('INSUFFICIENT_DATA');
+    expect(resAfterAllDeleted.weekly.insight).toBeUndefined();
   });
 
   // T-R03: Goal over-allocation tidak menyebabkan error runtime pada engine

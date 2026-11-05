@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import type { Bill } from '@/lib/db/schema';
+import { getTodayLocalDateKey, toLocalDateKey } from '@/lib/utils/localDate';
 
 interface BillModalProps {
   isOpen: boolean;
@@ -15,7 +16,9 @@ interface BillModalProps {
 export function BillModal({ isOpen, mode, bill, onClose, onSubmit }: BillModalProps) {
   const [title, setTitle] = useState(bill?.title ?? '');
   const [amount, setAmount] = useState(bill ? String(bill.amount) : '');
-  const [dueDate, setDueDate] = useState(bill?.due_date.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState(() =>
+    bill ? toLocalDateKey(bill.due_date) : getTodayLocalDateKey()
+  );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 

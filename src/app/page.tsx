@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Account, type Category, type Goal, type Transaction } from '@/lib/db/schema';
+import { db, type Account, type Category, type Transaction } from '@/lib/db/schema';
 import { seedDefaultCategories } from '@/lib/db/seed';
 import { calculateFinancialOverview } from '@/lib/finance/calculator';
 import { createAccount, getAccountBalance, softDeleteAccount, updateAccount } from '@/lib/services/accountService';
@@ -16,11 +16,12 @@ import { evaluateAllInsights } from '@/lib/insight/insightEngine';
 import { BottomSheet, type TransactionFormData } from '@/components/ui/BottomSheet';
 import { AccountModal } from '@/components/ui/AccountModal';
 import { CategoryManagement } from '@/components/ui/CategoryManagement';
-import { ArrowLeftRight, Wallet, Plus, Pencil, Trash2, Target } from 'lucide-react';
+import { ArrowLeftRight, ArrowRight, Wallet, Plus, Pencil, Trash2, Target } from 'lucide-react';
 import { exportTransactionsToCSV } from '@/lib/utils/csvExporter';
 import { Download } from 'lucide-react';
 import { CategoryIcon } from '@/components/ui/CategoryManagement';
 import { PeriodNavigator, getCurrentMonthPeriod, formatMonthPeriod, isAllTimePeriod } from '@/components/ui/PeriodNavigator';
+import { filterTransactionsByLocalDate, toLocalDateKey } from '@/lib/utils/localDate';
 
 interface HomeProps {
   initialTab?: string;
@@ -100,7 +101,6 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const [transactionModalKey, setTransactionModalKey] = useState(0);
   const [transactionActionError, setTransactionActionError] = useState('');
   const [transactionActionSuccess, setTransactionActionSuccess] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState(getCurrentMonthPeriod);
   const [transactionPeriod, setTransactionPeriod] = useState(getCurrentMonthPeriod);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalMode, setAccountModalMode] = useState<'create' | 'edit'>('create');
@@ -115,9 +115,15 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const bills = useLiveQuery(() => db.bills.toArray(), []);
   const transactions = useLiveQuery(() => db.transactions.reverse().toArray(), []);
   const financialOverview = useLiveQuery(() => calculateFinancialOverview(), []);
-  const filteredTransactions = transactions?.filter((transaction) => transaction.transaction_date.slice(0, 7) === selectedPeriod);
-  const sortedPeriodTransactions = filteredTransactions?.slice().sort(
-    (first, second) => Date.parse(second.transaction_date) - Date.parse(first.transaction_date)
+  const today = new Date();
+  const currentMonthPeriod = getCurrentMonthPeriod();
+  const todaysTransactions = transactions
+    ? filterTransactionsByLocalDate(transactions, today).slice().sort(
+        (first, second) => Date.parse(second.transaction_date) - Date.parse(first.transaction_date)
+      )
+    : undefined;
+  const currentMonthTransactions = transactions?.filter(
+    (transaction) => toLocalDateKey(transaction.transaction_date).slice(0, 7) === currentMonthPeriod
   );
 
   // Filter khusus tab Transaksi: mendukung mode "Semua Waktu" (ALL_TIME).
@@ -148,6 +154,11 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
   const handleInsightAction = (targetTab: InsightActionTarget) => {
     setActiveTab(targetTab);
     router.push(INSIGHT_ACTION_ROUTES[targetTab]);
+  };
+
+  const navigateToTransactions = () => {
+    setActiveTab('transactions');
+    router.push('/transactions');
   };
 
   useEffect(() => {
@@ -279,11 +290,11 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
     }
   };
 
-  const monthlyIncome = filteredTransactions
+  const monthlyIncome = currentMonthTransactions
     ?.filter((t) => t.type === 'INCOME')
     .reduce((sum, t) => sum + t.amount, 0) || 0;
 
-  const monthlyExpense = filteredTransactions
+  const monthlyExpense = currentMonthTransactions
     ?.filter((t) => t.type === 'EXPENSE')
     .reduce((sum, t) => sum + t.amount, 0) || 0;
   const netCashFlow = monthlyIncome - monthlyExpense;
@@ -310,16 +321,10 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             monthlyExpense={monthlyExpense}
             netCashFlow={netCashFlow}
             isLoading={!financialOverview}
-            selectedPeriod={selectedPeriod}
+            selectedPeriod={currentMonthPeriod}
           />
 
-          <PeriodNavigator
-            selectedPeriod={selectedPeriod}
-            onPeriodChange={setSelectedPeriod}
-            label="Periode Analisis"
-          />
-
-          {/* 3 Kartu Wawasan Finansial (Harian, Mingguan, Bulanan) */}
+          {/* Priority Inbox berbasis domain (Saldo, Tagihan, Pengeluaran, Target, Data) */}
           <InsightSection
             daily={insights.daily}
             weekly={insights.weekly}
@@ -328,15 +333,28 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
           />
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-sm text-slate-600 dark:text-slate-400">Transaksi {formatMonthPeriod(selectedPeriod)}</h3>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-sm text-slate-600 dark:text-slate-400">Transaksi Hari Ini</h3>
+              <button
+                type="button"
+                onClick={navigateToTransactions}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700 dark:hover:text-emerald-400"
+              >
+                Lihat Semua Transaksi
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            </div>
 
-            {(!sortedPeriodTransactions || sortedPeriodTransactions.length === 0) ? (
-              <p className="text-xs text-slate-400 text-center py-6">
-                Belum ada transaksi pada periode yang dipilih.
-              </p>
+            {(!todaysTransactions || todaysTransactions.length === 0) ? (
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-2">
+                <p className="text-sm text-slate-500 dark:text-slate-400">Belum ada transaksi hari ini.</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Transaksi yang Anda catat hari ini akan muncul di sini.
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {groupTransactionsByDate(sortedPeriodTransactions.slice(0, 10)).map(({ date, items }) => {
+                {groupTransactionsByDate(todaysTransactions).map(({ date, items }) => {
                   const { day, dayName } = formatDateHeading(date);
                   const dailyTotal = items.reduce((sum, tx) => {
                     if (tx.type === 'INCOME') return sum + tx.amount;
@@ -444,12 +462,13 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
             allowAllTime
           />
 
-          {/* Summary cards: Income, Expense, Kelola Kategori (desktop) */}
+          {/* Summary cards: Income, Expense, Net Cash Flow, Kelola Kategori (desktop) */}
           {(() => {
             const periodIncome = sortedTransactionPeriodTransactions?.filter((tx) => tx.type === 'INCOME').reduce((s, tx) => s + tx.amount, 0) ?? 0;
             const periodExpense = sortedTransactionPeriodTransactions?.filter((tx) => tx.type === 'EXPENSE').reduce((s, tx) => s + tx.amount, 0) ?? 0;
+            const periodNetCashFlow = periodIncome - periodExpense;
             return (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                 {/* Income card */}
                 <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-1">
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Income</p>
@@ -466,12 +485,22 @@ export default function Home({ initialTab = 'dashboard' }: HomeProps) {
                   </p>
                   <p className="text-[11px] text-slate-500">{transactionPeriodLabel}</p>
                 </div>
+                {/* Net Cash Flow card: Income - Expense, transfer dikecualikan */}
+                <div className="col-span-2 md:col-span-1 bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-1">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Net Cash Flow</p>
+                  <p className={`font-bold font-mono text-sm md:text-base leading-tight break-words tabular-nums ${periodNetCashFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {periodNetCashFlow > 0 ? '+' : ''}Rp {periodNetCashFlow.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-[11px] text-slate-500">{transactionPeriodLabel}</p>
+                </div>
                 {/* Kelola Kategori card — desktop only */}
-                <CategoryManagement
-                  categories={categories || []}
-                  transactions={transactions || []}
-                  variant="summary"
-                />
+                <div className="md:col-span-3 lg:col-span-1">
+                  <CategoryManagement
+                    categories={categories || []}
+                    transactions={transactions || []}
+                    variant="summary"
+                  />
+                </div>
               </div>
             );
           })()}

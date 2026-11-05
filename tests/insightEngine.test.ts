@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { Account, Bill, Category, Goal, Transaction } from '@/lib/db/schema';
+import type { Account, Category, Goal, Transaction } from '@/lib/db/schema';
 import {
-  evaluateDailyInsight,
   evaluateWeeklyInsight,
   evaluateMonthlyInsight,
   evaluateAllInsights,
   prioritizeSinglePeriodCandidates,
 } from '@/lib/insight/insightEngine';
 import { evaluateGoalApproachingTarget } from '@/lib/insight/rules/monthlyRules';
+import { evaluateSafeToSpendCritical } from '@/lib/insight/rules/dailyRules';
 import type { FinancialInsight, InsightEngineInput } from '@/lib/insight/insightTypes';
 
 const baseAccount: Account = {
@@ -168,15 +168,20 @@ describe('Phase 2: Insight Engine & Detection Rules', () => {
 
     const results = evaluateAllInsights(input);
 
-    // Daily wajib memunculkan insight kritis
+    // Daily wajib memunculkan insight kritis dengan diagnosis komitmen gabungan
     expect(results.daily.state).toBe('INSIGHT_AVAILABLE');
     expect(results.daily.insight?.urgency).toBe('CRITICAL');
     expect(results.daily.insight?.id).toBe('daily-safe-to-spend-critical');
+    expect(results.daily.insight?.title).toBe('Saldo Kas Tidak Menutup Komitmen');
+    expect(results.daily.insight?.actionTarget).toBe('bills');
 
     // Weekly wajib memunculkan insight hygiene uncategorized (TIDAK ditekan oleh Daily)
     expect(results.weekly.state).toBe('INSIGHT_AVAILABLE');
     expect(results.weekly.insight?.urgency).toBe('HYGIENE');
     expect(results.weekly.insight?.id).toBe('weekly-uncategorized-expenses');
+    expect(results.weekly.insights?.map((insight) => insight.id)).toContain(
+      'weekly-uncategorized-expenses'
+    );
   });
 
   // T-E06: Seleksi prioritas internal periode memilih kandidat urgensi tertinggi
@@ -185,6 +190,7 @@ describe('Phase 2: Insight Engine & Detection Rules', () => {
       {
         id: 'insight-hygiene',
         periodType: 'DAILY',
+        domain: 'DATA',
         urgency: 'HYGIENE',
         title: 'Hygiene',
         observation: '',
@@ -196,6 +202,7 @@ describe('Phase 2: Insight Engine & Detection Rules', () => {
       {
         id: 'insight-critical',
         periodType: 'DAILY',
+        domain: 'SALDO',
         urgency: 'CRITICAL',
         title: 'Critical',
         observation: '',
@@ -207,6 +214,7 @@ describe('Phase 2: Insight Engine & Detection Rules', () => {
       {
         id: 'insight-warning',
         periodType: 'DAILY',
+        domain: 'TAGIHAN',
         urgency: 'WARNING',
         title: 'Warning',
         observation: '',
@@ -247,5 +255,162 @@ describe('Phase 2: Insight Engine & Detection Rules', () => {
     // Data cukup, ada kategori lengkap, tidak ada tagihan risiko
     expect(weekly.state).toBe('NO_SIGNIFICANT_FINDING');
     expect(weekly.fallbackMessage).toContain('stabil dan terkendali');
+  });
+
+  // T-E08: D-1 mendiagnosis penyebab defisit dan memilih CTA yang relevan
+  it('T-E08: should diagnose the cause of a negative Safe-to-Spend', () => {
+    const baseInput: InsightEngineInput = {
+      transactions: [],
+      accounts: [baseAccount],
+      categories: [baseCategory],
+      bills: [],
+      goals: [],
+      referenceDate: new Date(2026, 10, 5),
+    };
+
+    const billsOnly = evaluateSafeToSpendCritical({
+      ...baseInput,
+      overview: {
+        totalCurrentBalance: 1_500_000,
+        totalUnpaidBills: 2_000_000,
+        totalAllocatedGoals: 0,
+        safeToSpend: -500_000,
+      },
+    });
+
+    expect(billsOnly?.title).toBe('Tagihan Melebihi Saldo Kas');
+    expect(billsOnly?.actionTarget).toBe('bills');
+    expect(billsOnly?.evidence.breakdown?.map((item) => item.label)).toEqual([
+      'Saldo Kas',
+      'Tagihan Belum Dibayar',
+      'Dana Pos Target',
+    ]);
+
+    const goalsOnly = evaluateSafeToSpendCritical({
+      ...baseInput,
+      overview: {
+        totalCurrentBalance: 1_500_000,
+        totalUnpaidBills: 0,
+        totalAllocatedGoals: 2_000_000,
+        safeToSpend: -500_000,
+      },
+    });
+
+    expect(goalsOnly?.title).toBe('Dana Target Melebihi Saldo Kas');
+    expect(goalsOnly?.actionTarget).toBe('goals');
+
+    const negativeBalance = evaluateSafeToSpendCritical({
+      ...baseInput,
+      overview: {
+        totalCurrentBalance: -500_000,
+        totalUnpaidBills: 0,
+        totalAllocatedGoals: 0,
+        safeToSpend: -500_000,
+      },
+    });
+
+    expect(negativeBalance?.title).toBe('Saldo Kas Negatif');
+    expect(negativeBalance?.actionTarget).toBe('transactions');
+  });
+
+  // T-E09: W-2 aktif dengan 1 transaksi INCOME tanpa kategori
+  it('T-E09: should trigger uncategorized warning for a single income transaction', () => {
+    const ref = new Date(2026, 10, 4); // 4 Nov 2026 (Rabu)
+    const input: InsightEngineInput = {
+      transactions: [
+        createTx('tx-income', 'INCOME', 75_000, '2026-11-03T10:00:00.000Z'),
+      ],
+      accounts: [baseAccount],
+      categories: [baseCategory],
+      bills: [],
+      goals: [],
+      overview: {
+        totalCurrentBalance: 5_000_000,
+        totalUnpaidBills: 0,
+        totalAllocatedGoals: 0,
+        safeToSpend: 5_000_000,
+      },
+      referenceDate: ref,
+    };
+
+    const weekly = evaluateWeeklyInsight(input);
+
+    expect(weekly.state).toBe('INSIGHT_AVAILABLE');
+    expect(weekly.insight?.id).toBe('weekly-uncategorized-expenses');
+    expect(weekly.insight?.observation).toContain('1 transaksi');
+    expect(weekly.insight?.nominalImpact).toBe(75_000);
+  });
+
+  // T-E10: W-2 tetap tersedia di Priority Inbox saat W-1 juga terpicu
+  it('T-E10: should expose both W-1 and W-2 candidates when both rules trigger', () => {
+    const ref = new Date(2026, 10, 4); // 4 Nov 2026
+    const input: InsightEngineInput = {
+      transactions: [
+        createTx('tx-uncat', 'EXPENSE', 50_000, '2026-11-03T10:00:00.000Z'),
+      ],
+      accounts: [baseAccount],
+      categories: [baseCategory],
+      bills: [
+        {
+          id: 'bill-urgent',
+          title: 'Listrik',
+          amount: 600_000,
+          due_date: '2026-11-05T00:00:00.000Z',
+          is_paid: false,
+          created_at: '2026-11-01T00:00:00.000Z',
+        },
+      ],
+      goals: [],
+      overview: {
+        totalCurrentBalance: 1_000_000,
+        totalUnpaidBills: 600_000,
+        totalAllocatedGoals: 0,
+        safeToSpend: 400_000,
+      },
+      referenceDate: ref,
+    };
+
+    const weekly = evaluateWeeklyInsight(input);
+    const ids = weekly.insights?.map((insight) => insight.id) ?? [];
+
+    expect(ids).toContain('weekly-upcoming-bills-risk');
+    expect(ids).toContain('weekly-uncategorized-expenses');
+    expect(weekly.insight?.id).toBe('weekly-upcoming-bills-risk');
+  });
+
+  // T-E11: M-1 membandingkan bulan berjalan dengan total penuh bulan lalu dan memakai comparator ketat
+  it('T-E11: should compare current month spending against the full prior month with strict greater-than', () => {
+    const ref = new Date(2026, 10, 6); // 6 Nov 2026
+    const priorTx = createTx('tx-prior', 'EXPENSE', 150_000, '2026-10-30T10:00:00.000Z', 'cat-food');
+    const equalCurrentTx = createTx('tx-equal', 'EXPENSE', 150_000, '2026-11-05T10:00:00.000Z', 'cat-food');
+    const higherCurrentTx = createTx('tx-higher', 'EXPENSE', 200_000, '2026-11-05T10:00:00.000Z', 'cat-food');
+
+    const baseInput: InsightEngineInput = {
+      transactions: [priorTx, equalCurrentTx],
+      accounts: [baseAccount],
+      categories: [baseCategory],
+      bills: [],
+      goals: [],
+      overview: {
+        totalCurrentBalance: 5_000_000,
+        totalUnpaidBills: 0,
+        totalAllocatedGoals: 0,
+        safeToSpend: 5_000_000,
+      },
+      referenceDate: ref,
+    };
+
+    const equalResult = evaluateMonthlyInsight(baseInput);
+    expect(equalResult.insight?.id ?? '').not.toContain('monthly-category-surge');
+
+    const higherResult = evaluateMonthlyInsight({
+      ...baseInput,
+      transactions: [priorTx, higherCurrentTx],
+    });
+
+    expect(higherResult.insight?.id).toBe('monthly-category-surge-cat-food');
+    expect(higherResult.insight?.observation).toContain('Rp 200.000');
+    expect(higherResult.insight?.observation).toContain('Rp 150.000');
+    expect(higherResult.insight?.evidence.diff).toBe('+Rp 50.000');
   });
 });

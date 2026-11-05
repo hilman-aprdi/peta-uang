@@ -109,6 +109,26 @@ export function getMonthlyWindows(referenceDate: Date = new Date()): Observation
 }
 
 /**
+ * Mengembalikan batas penuh bulan lalu berdasarkan kalender lokal.
+ * Current comparison: tanggal 1 s.d. hari terakhir bulan lalu, 00:00 s.d. 23:59:59.999.
+ *
+ * Helper ini terpisah dari `getMonthlyWindows` agar window MTD ekuivalen yang sudah
+ * dipakai aturan lain tidak berubah.
+ */
+export function getPriorFullMonthWindow(referenceDate: Date = new Date()): DateRange {
+  const currentYear = referenceDate.getFullYear();
+  const currentMonth = referenceDate.getMonth();
+
+  const priorYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const priorMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+  const priorStart = new Date(priorYear, priorMonth, 1, 0, 0, 0, 0);
+  const priorEnd = new Date(priorYear, priorMonth + 1, 0, 23, 59, 59, 999);
+
+  return { start: priorStart, end: priorEnd };
+}
+
+/**
  * Mengecek apakah timestamp ISO string berada di dalam rentang DateRange.
  */
 export function isWithinRange(dateStr: string, range: DateRange): boolean {

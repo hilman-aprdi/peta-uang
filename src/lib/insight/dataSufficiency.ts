@@ -24,6 +24,19 @@ export function filterExpenses(transactions: Transaction[]): Transaction[] {
 }
 
 /**
+ * Filter transaksi yang dapat memiliki kategori: EXPENSE dan INCOME.
+ * TRANSFER tidak memakai kategori sehingga selalu dikecualikan.
+ */
+export function filterCategorizableTransactions(transactions: Transaction[]): Transaction[] {
+  return transactions.filter(
+    (tx) =>
+      (tx.type === 'EXPENSE' || tx.type === 'INCOME') &&
+      Number.isFinite(tx.amount) &&
+      tx.amount > 0
+  );
+}
+
+/**
  * Ambil transaksi pengeluaran di dalam rentang waktu DateRange tertentu.
  */
 export function getExpensesInRange(transactions: Transaction[], range: DateRange): Transaction[] {
@@ -104,39 +117,31 @@ export function evaluateWeeklyComparisonSufficiency(
 }
 
 /**
- * Evaluasi kecukupan data untuk Analisis Komparasi Kategori Bulanan (Monthly MTD Comparison).
+ * Evaluasi kecukupan data untuk Analisis Komparasi Kategori Bulanan.
  * Syarat:
- * 1. Minimal hari ke-3 di bulan berjalan (tanggal 1–2 awal bulan terlalu fluktuatif).
- * 2. Minimal 3 transaksi pengeluaran bulan ini.
- * 3. Baseline pengeluaran MTD bulan lalu pada kategori terkait minimal Rp100.000.
+ * 1. Minimal 1 transaksi pada kategori terkait di bulan berjalan.
+ * 2. Total penuh kategori terkait pada bulan lalu minimal Rp100.000 sebagai baseline.
+ *
+ * Tidak ada gate hari ke-3 dan tidak ada syarat jumlah transaksi global, karena
+ * perbandingan dilakukan terhadap total penuh bulan lalu.
  */
 export function evaluateMonthlyComparisonSufficiency(
-  referenceDate: Date,
-  currentMtdExpenses: Transaction[],
-  priorMtdCategoryTotal: number,
-  minElapsedDay = 3,
-  minCurrentTxCount = 3,
+  currentCategoryTxCount: number,
+  priorFullMonthCategoryTotal: number,
+  minCurrentCategoryTxCount = 1,
   minPriorCategoryAmount = 100_000
 ): DataSufficiencyResult {
-  const currentDay = referenceDate.getDate();
-  if (currentDay < minElapsedDay) {
+  if (currentCategoryTxCount < minCurrentCategoryTxCount) {
     return {
       isSufficient: false,
-      reason: `Awal bulan (hari ke-${currentDay}) masih terlalu dini untuk perbandingan pengeluaran bulanan.`,
+      reason: `Belum ada transaksi kategori ini bulan berjalan (dibutuhkan minimal ${minCurrentCategoryTxCount} transaksi).`,
     };
   }
 
-  if (currentMtdExpenses.length < minCurrentTxCount) {
+  if (priorFullMonthCategoryTotal < minPriorCategoryAmount) {
     return {
       isSufficient: false,
-      reason: `Baru terdapat ${currentMtdExpenses.length} transaksi bulan ini (dibutuhkan minimal ${minCurrentTxCount} transaksi).`,
-    };
-  }
-
-  if (priorMtdCategoryTotal < minPriorCategoryAmount) {
-    return {
-      isSufficient: false,
-      reason: `Baseline kategori bulan lalu belum mencukupi (Rp ${priorMtdCategoryTotal.toLocaleString('id-ID')} dari batas minimal Rp ${minPriorCategoryAmount.toLocaleString('id-ID')}).`,
+      reason: `Baseline kategori bulan lalu belum mencukupi (Rp ${priorFullMonthCategoryTotal.toLocaleString('id-ID')} dari batas minimal Rp ${minPriorCategoryAmount.toLocaleString('id-ID')}).`,
     };
   }
 

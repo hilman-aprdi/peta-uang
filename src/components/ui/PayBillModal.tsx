@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Bill } from '@/lib/db/schema';
+import { getTodayLocalDateKey } from '@/lib/utils/localDate';
 
 interface PayBillModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export function PayBillModal({ isOpen, bill, onClose, onConfirm }: PayBillModalP
 
   const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [paymentDate, setPaymentDate] = useState(() => getTodayLocalDateKey());
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 

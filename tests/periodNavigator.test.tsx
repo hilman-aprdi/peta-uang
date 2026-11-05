@@ -19,8 +19,18 @@ describe('PeriodNavigator — mode Semua Waktu', () => {
 
     expect(markup).toContain('Semua Waktu');
     expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain('aria-label="Matikan mode semua waktu"');
     expect(markup).toContain('aria-label="Kembali ke bulan ini"');
     expect(markup.match(/ disabled=""/g)?.length).toBe(3); // prev, next, month input
+  });
+
+  it('menampilkan tombol Semua Waktu sebagai toggle yang bisa dimatikan saat mode bulan', () => {
+    const markup = renderNavigator('2026-11', true);
+
+    expect(markup).toContain('Semua Waktu');
+    expect(markup).toContain('aria-pressed="false"');
+    expect(markup).toContain('aria-label="Tampilkan semua waktu"');
+    expect(markup).not.toContain('Matikan mode semua waktu');
   });
 
   it('tidak menonaktifkan navigasi saat masih memakai periode bulan', () => {

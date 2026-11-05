@@ -4,7 +4,7 @@ import {
   getDailyWindows,
   getWeeklyWindows,
   getMonthlyWindows,
-  isWithinRange,
+  getPriorFullMonthWindow,
 } from '@/lib/insight/periodHelper';
 import {
   evaluateDailyPatternSufficiency,
@@ -12,6 +12,7 @@ import {
   evaluateMonthlyComparisonSufficiency,
   countUniqueActiveDays,
   filterExpenses,
+  filterCategorizableTransactions,
 } from '@/lib/insight/dataSufficiency';
 
 const createTx = (
@@ -97,6 +98,22 @@ describe('Phase 1: Period Utilities & Data Sufficiency', () => {
     expect(mayWindows.priorWindow.end.getDate()).toBe(30); // Patok pada 30 April
   });
 
+  // T-P03b: Full prior month window, termasuk lintas tahun
+  it('T-P03b: should compute the full prior month window including year boundary', () => {
+    const ref = new Date(2026, 0, 15); // 15 Januari 2026
+    const priorWindow = getPriorFullMonthWindow(ref);
+
+    expect(priorWindow.start.getFullYear()).toBe(2025);
+    expect(priorWindow.start.getMonth()).toBe(11); // Desember
+    expect(priorWindow.start.getDate()).toBe(1);
+
+    expect(priorWindow.end.getFullYear()).toBe(2025);
+    expect(priorWindow.end.getMonth()).toBe(11);
+    expect(priorWindow.end.getDate()).toBe(31);
+    expect(priorWindow.end.getHours()).toBe(23);
+    expect(priorWindow.end.getMinutes()).toBe(59);
+  });
+
   // T-P04: Daily sufficiency: 1 transaksi tanpa data histori masa lalu mengembalikan INSUFFICIENT_DATA untuk rule pola
   it('T-P04: should require historical data for daily pattern analysis', () => {
     const singleTx = [createTx('tx-1', 'EXPENSE', 50_000, '2026-11-04T10:00:00.000Z')];
@@ -143,18 +160,17 @@ describe('Phase 1: Period Utilities & Data Sufficiency', () => {
     expect(result.reason).toContain('Data pembanding minggu lalu belum mencukupi');
   });
 
-  // T-P07: Monthly sufficiency: Evaluasi pada tanggal 2 awal bulan mengembalikan INSUFFICIENT_DATA
-  it('T-P07: should reject monthly comparison on the first 2 days of the month', () => {
-    const earlyMonth = new Date(2026, 10, 2); // 2 November
-    const currentTxs = [
-      createTx('tx-1', 'EXPENSE', 50_000, '2026-11-01T10:00:00.000Z'),
-      createTx('tx-2', 'EXPENSE', 50_000, '2026-11-01T12:00:00.000Z'),
-      createTx('tx-3', 'EXPENSE', 50_000, '2026-11-02T10:00:00.000Z'),
-    ];
+  // T-P07: Monthly sufficiency memakai 1 transaksi kategori dan baseline penuh bulan lalu
+  it('T-P07: should require one current category transaction and a Rp100.000 prior-month baseline', () => {
+    expect(evaluateMonthlyComparisonSufficiency(1, 150_000).isSufficient).toBe(true);
 
-    const result = evaluateMonthlyComparisonSufficiency(earlyMonth, currentTxs, 500_000, 3, 3, 100_000);
-    expect(result.isSufficient).toBe(false);
-    expect(result.reason).toContain('terlalu dini untuk perbandingan pengeluaran bulanan');
+    const noCurrentCategoryTx = evaluateMonthlyComparisonSufficiency(0, 150_000);
+    expect(noCurrentCategoryTx.isSufficient).toBe(false);
+    expect(noCurrentCategoryTx.reason).toContain('minimal 1 transaksi');
+
+    const lowBaseline = evaluateMonthlyComparisonSufficiency(1, 50_000);
+    expect(lowBaseline.isSufficient).toBe(false);
+    expect(lowBaseline.reason).toContain('Baseline kategori bulan lalu belum mencukupi');
   });
 
   // Isolation test: Filter expenses excludes TRANSFER and INCOME
@@ -168,5 +184,18 @@ describe('Phase 1: Period Utilities & Data Sufficiency', () => {
     const expensesOnly = filterExpenses(mixedTxs);
     expect(expensesOnly.length).toBe(1);
     expect(expensesOnly[0].id).toBe('tx-expense');
+  });
+
+  // Filter kategori mencakup INCOME dan EXPENSE, tetapi tetap mengecualikan TRANSFER
+  it('should include EXPENSE and INCOME but exclude TRANSFER in categorizable filters', () => {
+    const mixedTxs = [
+      createTx('tx-income', 'INCOME', 5_000_000, '2026-11-04T10:00:00.000Z'),
+      createTx('tx-transfer', 'TRANSFER', 1_000_000, '2026-11-04T11:00:00.000Z'),
+      createTx('tx-expense', 'EXPENSE', 150_000, '2026-11-04T12:00:00.000Z'),
+      createTx('tx-zero', 'EXPENSE', 0, '2026-11-04T13:00:00.000Z'),
+    ];
+
+    const categorizable = filterCategorizableTransactions(mixedTxs);
+    expect(categorizable.map((tx) => tx.id)).toEqual(['tx-income', 'tx-expense']);
   });
 });

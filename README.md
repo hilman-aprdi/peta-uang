@@ -2,25 +2,27 @@
 ![PetaUang Icon](public/icon-192.png)
 > **Know your money. Find your direction.**
 
-PetaUang adalah aplikasi pengelolaan keuangan pribadi berbasis *local-first* untuk mencatat pemasukan, pengeluaran, transfer antar-akun, serta mengelola tagihan. Dashboard menyajikan ringkasan saldo akun, Safe-to-Spend, dan arus kas berdasarkan bulan yang dipilih.
+PetaUang adalah aplikasi pengelolaan keuangan pribadi berbasis *local-first* untuk mencatat pemasukan, pengeluaran, transfer antar-akun, mengelola tagihan, serta mengelola target tabungan. Dashboard menyajikan ringkasan saldo akun, Safe-to-Spend, arus kas bulan berjalan, wawasan finansial, dan transaksi hari ini.
 
 ## Overview
 
 Mengelola keuangan pribadi seharusnya tidak menjadi sesuatu yang rumit.
 
-PetaUang membantu individu memahami kondisi keuangan sehari-hari melalui satu tempat untuk mencatat transaksi, memantau saldo akun, mengelola anggaran, dan mengawasi kewajiban pembayaran.
+PetaUang membantu individu memahami kondisi keuangan sehari-hari melalui satu tempat untuk mencatat transaksi, memantau saldo akun, mengelola target tabungan, dan mengawasi kewajiban pembayaran.
 
 Dengan pendekatan *local-first*, PetaUang tidak memerlukan proses registrasi atau login. Seluruh catatan keuangan disimpan secara lokal di browser menggunakan IndexedDB melalui Dexie.js. Saldo dan ringkasan dashboard dihitung berdasarkan data yang tersimpan tersebut.
 
 ## Fitur Utama
 
-- **Dashboard Keuangan:** Menampilkan Current Balance, Safe-to-Spend, Cash In, Cash Out, Net Cash Flow bulanan, dan transaksi terbaru.
-- **Pengelolaan Akun:** Membuat dan mengubah akun seperti uang tunai, rekening bank, dompet digital, dan investasi. Akun dapat dinonaktifkan dengan peringatan. Transaksi transfer yang melibatkan akun tersebut akan dihapus, sedangkan catatan pemasukan dan pengeluaran tetap dipertahankan.
+- **Dashboard Keuangan:** Menampilkan Current Balance, Safe-to-Spend, Cash In, Cash Out, Net Cash Flow bulan berjalan, wawasan finansial, dan seluruh transaksi hari ini.
+- **Pengelolaan Akun:** Membuat dan mengubah akun seperti uang tunai, rekening bank, dompet digital, dan investasi. Saat mengedit, **Saldo Saat Ini** dapat disesuaikan dan selisihnya dicatat sebagai transaksi penyesuaian. Akun dapat dinonaktifkan dengan peringatan; transaksi transfer yang melibatkan akun tersebut akan dihapus, sedangkan catatan pemasukan dan pengeluaran tetap dipertahankan.
 - **Pengelolaan Transaksi:** Mencatat, mengubah, dan menghapus transaksi pemasukan maupun pengeluaran, lengkap dengan kategori, catatan, tanggal, dan akun terkait.
 - **Transfer Antar-Akun:** Memindahkan saldo antar-akun. Transfer hanya dapat dilakukan jika saldo akun sumber mencukupi dan tidak dihitung sebagai pemasukan maupun pengeluaran.
 - **Pengelolaan Kategori:** Membuat, mengubah, dan mengelola kategori beserta ikonnya. Penonaktifan kategori tetap mempertahankan referensi transaksi historis. Transaksi tanpa kategori ditampilkan sebagai **Uncategorized**.
 - **Pengelolaan Tagihan:** Membuat, mengubah, menghapus, serta memperbarui status pembayaran tagihan menjadi lunas atau belum lunas. Tagihan yang belum dibayar menjadi pengurang dalam perhitungan Safe-to-Spend.
-- **Filter Bulanan:** Memilih bulan tertentu untuk meninjau ringkasan dashboard dan transaksi.
+- **Target Tabungan:** Membuat target, mengalokasikan dana, menarik dana, dan mencatat pembelanjaan dari pos target. Alokasi mengurangi Safe-to-Spend tanpa mengubah saldo kas akun.
+- **Wawasan Finansial:** Menampilkan wawasan deterministik untuk periode Harian, Mingguan, dan Bulanan berdasarkan data lokal.
+- **Filter Periode Transaksi:** Halaman transaksi menyediakan filter bulan, opsi **Semua Waktu** sebagai toggle, dan tombol kembali ke **Bulan Ini**.
 - **Ekspor CSV:** Mengunduh catatan transaksi dalam format CSV dengan sembilan kolom.
 - **Progressive Web App (PWA):** Mendukung manifest web, ikon aplikasi, dan Service Worker. Kemampuan instalasi serta penggunaan offline bergantung pada browser dan konfigurasi deployment, sehingga perlu diuji pada lingkungan target.
 
@@ -28,15 +30,20 @@ Dengan pendekatan *local-first*, PetaUang tidak memerlukan proses registrasi ata
 
 **Safe-to-Spend**
 
-Menunjukkan estimasi dana yang masih tersedia untuk digunakan setelah memperhitungkan seluruh tagihan yang belum dibayar.
+Menunjukkan estimasi dana yang masih tersedia untuk digunakan setelah memperhitungkan seluruh tagihan yang belum dibayar dan dana yang dialokasikan ke target tabungan.
 
 ```text
-Current Balance - Total Unpaid Bills
+Current Balance - Total Unpaid Bills - Total Allocated Goals
 ```
 
 **Cash Flow**
 
-Arus kas dihitung berdasarkan transaksi pada bulan yang dipilih. Perhitungannya mencakup pemasukan dan pengeluaran, sedangkan transfer antar-akun tidak diperhitungkan karena bukan merupakan pemasukan atau pengeluaran.
+Arus kas dihitung dari pemasukan dan pengeluaran, sedangkan transfer antar-akun tidak diperhitungkan karena bukan merupakan pemasukan atau pengeluaran. Cakupan periode berbeda menurut tampilan:
+
+- **Dashboard:** selalu bulan berjalan; Dashboard tidak memiliki filter periode.
+- **Halaman Transaksi:** bulan yang dipilih, atau seluruh transaksi saat mode **Semua Waktu** aktif.
+
+Dashboard hanya menampilkan transaksi hari ini berdasarkan kalender lokal perangkat. Daftar transaksi hari ini tidak otomatis berganti tepat tengah malam sampai terjadi render atau perubahan data berikutnya.
 
 ## Tech Stack
 
@@ -122,8 +129,10 @@ Berikut langkah dasar untuk mulai menggunakan PetaUang:
 3. **Catat transaksi.** Buka menu **Transaksi** untuk mencatat pemasukan, pengeluaran, atau transfer antar-akun. Kategori bersifat opsional untuk pemasukan dan pengeluaran. Transaksi tanpa kategori akan ditampilkan sebagai **Uncategorized**.
 4. **Kelola kategori.** Gunakan menu **Kelola Kategori** pada halaman transaksi untuk membuat, mengubah, atau menonaktifkan kategori.
 5. **Kelola tagihan.** Buka menu **Tagihan** untuk membuat dan mengelola tagihan serta memperbarui status pembayarannya.
-6. **Pantau kondisi keuangan.** Kembali ke dashboard dan pilih bulan yang ingin ditinjau untuk melihat Cash Flow bulanan serta transaksi terbaru. Current Balance dan Safe-to-Spend juga tersedia pada dashboard.
-7. **Ekspor transaksi.** Gunakan tombol **Export CSV** pada halaman transaksi untuk mengunduh catatan transaksi.
+6. **Kelola target tabungan.** Buka menu **Target** untuk membuat target, mengalokasikan dana, menarik dana, atau mencatat pembelanjaan dari pos target.
+7. **Pantau kondisi keuangan.** Dashboard menampilkan Current Balance, Safe-to-Spend, Cash Flow bulan berjalan, wawasan finansial, dan transaksi hari ini. Gunakan tombol pada daftar transaksi hari ini untuk membuka halaman **Transaksi**.
+8. **Tinjau periode transaksi.** Pada halaman **Transaksi**, pilih bulan tertentu atau aktifkan **Semua Waktu**; tombol **Bulan Ini** mengembalikan tampilan ke bulan berjalan.
+9. **Ekspor transaksi.** Gunakan tombol **Export CSV** pada halaman transaksi untuk mengunduh catatan transaksi.
 
 ## Data & Privasi
 
@@ -131,9 +140,9 @@ PetaUang menggunakan pendekatan penyimpanan data lokal (*local-first*). Informas
 
 Beberapa hal yang perlu diketahui:
 
-- Data akun, kategori, transaksi, dan tagihan disimpan di database IndexedDB browser dengan nama `PetaUangDB`.
+- Data akun, kategori, transaksi, tagihan, target tabungan, dan riwayat alokasi target disimpan di database IndexedDB browser dengan nama `PetaUangDB`.
 - Aplikasi belum menggunakan autentikasi akun, database server, maupun sinkronisasi cloud.
-- Ekspor CSV hanya mencakup data transaksi, bukan seluruh data akun, kategori, tagihan, atau kondisi aplikasi.
+- Ekspor CSV hanya mencakup data transaksi, bukan seluruh data akun, kategori, tagihan, target tabungan, atau kondisi aplikasi.
 - Penyimpanan browser bersifat spesifik terhadap profil browser dan perangkat yang digunakan.
 - Menghapus data situs, menghapus profil browser, atau berpindah perangkat dapat menyebabkan data lokal tidak lagi tersedia.
 - Aplikasi belum menyediakan mekanisme pemulihan data melalui server.

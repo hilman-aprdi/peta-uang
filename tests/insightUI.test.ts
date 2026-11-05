@@ -3,9 +3,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { InsightUrgency, PeriodInsightResult } from '@/lib/insight/insightTypes';
 import { FinancialInsightCard } from '@/components/dashboard/FinancialInsightCard';
+import { InsightSection } from '@/components/dashboard/InsightSection';
 
 const renderCard = (result: PeriodInsightResult, onActionClick?: Parameters<typeof FinancialInsightCard>[0]['onActionClick']) =>
   renderToStaticMarkup(React.createElement(FinancialInsightCard, { result, onActionClick }));
+
+const renderSection = (
+  daily: PeriodInsightResult,
+  weekly: PeriodInsightResult,
+  monthly: PeriodInsightResult
+) =>
+  renderToStaticMarkup(
+    React.createElement(InsightSection, {
+      daily,
+      weekly,
+      monthly,
+      onActionClick: () => {},
+    })
+  );
 
 describe('Phase 3: Financial Insight UI Components Logic', () => {
   const availableResult: PeriodInsightResult = {
@@ -14,18 +29,23 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     insight: {
       id: 'daily-safe-to-spend-critical',
       periodType: 'DAILY',
+      domain: 'SALDO',
       urgency: 'CRITICAL',
-      title: 'Safe-to-Spend Defisit',
-      observation: 'Safe-to-Spend defisit sebesar -Rp 500.000.',
+      title: 'Saldo Kas Tidak Menutup Komitmen',
+      observation:
+        'Safe-to-Spend defisit sebesar -Rp 500.000 karena total tagihan belum dibayar dan dana pos target melebihi saldo kas Anda.',
       evidence: {
         currentValue: '-Rp 500.000',
-        previousValue: 'Saldo Riil: Rp 1.000.000',
-        diff: 'Kewajiban: Rp 1.500.000',
+        breakdown: [
+          { label: 'Saldo Kas', value: 'Rp 1.000.000' },
+          { label: 'Tagihan Belum Dibayar', value: 'Rp 1.200.000' },
+          { label: 'Dana Pos Target', value: 'Rp 300.000' },
+        ],
       },
-      interpretation: 'Komitmen melebihi kas.',
-      recommendation: 'Tarik pos target.',
-      actionTarget: 'goals',
-      actionLabel: 'Tinjau Pos Target',
+      interpretation: 'Saldo kas belum cukup menutup komitmen.',
+      recommendation: 'Prioritaskan peninjauan tagihan belum dibayar.',
+      actionTarget: 'bills',
+      actionLabel: 'Lihat Tagihan',
       nominalImpact: 500_000,
     },
   };
@@ -48,10 +68,11 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     insight: {
       id: 'weekly-upcoming-bills-risk',
       periodType: 'WEEKLY',
+      domain: 'TAGIHAN',
       urgency: 'WARNING',
       title: 'Beban Tagihan 7 Hari ke Depan Tinggi',
       observation:
-        'Terdapat 1 tagihan senilai Rp 3.000.000 (83% dari total saldo kas) yang jatuh tempo minggu ini.',
+        'Terdapat 1 tagihan senilai Rp 3.000.000 (83% dari total saldo kas) yang jatuh tempo dalam 7 hari ke depan.',
       evidence: {
         currentValue: 'Rp 3.000.000',
         previousValue: 'Total Saldo Kas: Rp 3.630.000',
@@ -71,16 +92,17 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     insight: {
       id: 'monthly-category-surge-food',
       periodType: 'MONTHLY',
+      domain: 'PENGELUARAN',
       urgency: 'WARNING',
-      title: 'Lonjakan Pengeluaran: Makanan & Minuman',
+      title: 'Melebihi Total Bulan Lalu: Makanan & Minuman',
       observation:
-        'Pengeluaran pada kategori "Makanan & Minuman" meningkat +200% dibandingkan periode yang sama bulan lalu.',
+        'Pengeluaran kategori "Makanan & Minuman" bulan ini Rp 300.000 sudah melebihi total pengeluaran bulan lalu Rp 100.000.',
       evidence: {
         currentValue: 'Bulan ini: Rp 300.000',
         previousValue: 'Bulan lalu: Rp 100.000',
-        diff: '+Rp 200.000 (+200%)',
+        diff: '+Rp 200.000',
       },
-      interpretation: 'Kategori ini mengambil porsi arus kas lebih besar.',
+      interpretation: 'Kategori ini menyerap dana lebih besar dibanding total bulan lalu.',
       recommendation: 'Tinjau detail transaksi kategori ini.',
       actionTarget: 'transactions',
       actionLabel: 'Tinjau Transaksi Kategori',
@@ -94,10 +116,11 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     insight: {
       id: 'weekly-uncategorized-expenses',
       periodType: 'WEEKLY',
+      domain: 'DATA',
       urgency: 'HYGIENE',
       title: 'Transaksi Belum Dikategorikan',
       observation:
-        'Terdapat 3 transaksi pengeluaran senilai Rp 150.000 minggu ini yang belum memiliki kategori.',
+        'Terdapat 3 transaksi senilai Rp 150.000 minggu ini yang belum memiliki kategori.',
       evidence: {
         currentValue: '3 transaksi',
         diff: 'Total: Rp 150.000',
@@ -124,15 +147,18 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
   // T-U02: Validasi konten lengkap pada state INSIGHT_AVAILABLE
   it('T-U02: should contain complete presentation fields for INSIGHT_AVAILABLE', () => {
     const insight = availableResult.insight!;
-    expect(insight.title).toBe('Safe-to-Spend Defisit');
+    expect(insight.title).toBe('Saldo Kas Tidak Menutup Komitmen');
     expect(insight.observation).toContain('-Rp 500.000');
     expect(insight.evidence.currentValue).toBe('-Rp 500.000');
-    expect(insight.evidence.previousValue).toBe('Saldo Riil: Rp 1.000.000');
-    expect(insight.evidence.diff).toBe('Kewajiban: Rp 1.500.000');
+    expect(insight.evidence.breakdown?.map((item) => item.label)).toEqual([
+      'Saldo Kas',
+      'Tagihan Belum Dibayar',
+      'Dana Pos Target',
+    ]);
     expect(insight.interpretation).toBeTruthy();
     expect(insight.recommendation).toBeTruthy();
-    expect(insight.actionTarget).toBe('goals');
-    expect(insight.actionLabel).toBe('Tinjau Pos Target');
+    expect(insight.actionTarget).toBe('bills');
+    expect(insight.actionLabel).toBe('Lihat Tagihan');
   });
 
   // T-U03: Validasi fallback message pada state INSUFFICIENT_DATA
@@ -153,7 +179,7 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     };
 
     handleAction(availableResult.insight!.actionTarget!);
-    expect(currentTab).toBe('goals');
+    expect(currentTab).toBe('bills');
   });
 
   // T-U06: Ketiga state memakai kerangka kartu yang sama dan label periode yang benar
@@ -200,11 +226,13 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     expect(markup).toContain('-Rp 500.000');
     expect(markup).toContain('text-red-500 dark:text-red-400');
 
-    // Nama konteks data langsung, bukan meta-label generik
-    expect(markup).toContain('Saldo Riil Saat Ini');
-    expect(markup).toContain('Kewajiban');
+    // Evidence terpisah per komponen, bukan satu angka gabungan
+    expect(markup).toContain('Saldo Kas');
+    expect(markup).toContain('Tagihan Belum Dibayar');
+    expect(markup).toContain('Dana Pos Target');
     expect(markup).toContain('Rp 1.000.000');
-    expect(markup).toContain('Rp 1.500.000');
+    expect(markup).toContain('Rp 1.200.000');
+    expect(markup).toContain('Rp 300.000');
     expect(markup).toContain('bg-slate-800/50');
 
     // Tabel meta-label lama sudah dihapus
@@ -236,7 +264,7 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     const withoutHandler = renderCard(availableResult);
 
     expect(withAction).toContain('<button');
-    expect(withAction).toContain('Tinjau Pos Target');
+    expect(withAction).toContain('Lihat Tagihan');
     expect(withoutHandler).not.toContain('<button');
   });
 
@@ -270,13 +298,14 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     expect(markup).toContain('Kelola Tagihan');
   });
 
-  // T-U13: Card bulanan memakai perbandingan dua kolom dan badge selisih
-  it('T-U13: should render the monthly surge with comparison grid and diff badge', () => {
+  // T-U13: Card bulanan membandingkan bulan berjalan dengan total penuh bulan lalu
+  it('T-U13: should render the monthly comparison with a nominal diff badge', () => {
     const markup = renderCard(monthlySurgeResult, () => {});
 
-    expect(markup).toContain('Lonjakan: ');
+    expect(markup).toContain('Melebihi Bulan Lalu: ');
     expect(markup).toContain('Makanan &amp; Minuman');
-    expect(markup).toContain('(+200%)');
+    expect(markup).toContain('Bulan berjalan vs total bulan lalu');
+    expect(markup).not.toContain('(+200%)');
     expect(markup).toContain('Bulan Ini');
     expect(markup).toContain('Bulan Lalu');
     expect(markup).toContain('Rp 300.000');
@@ -295,5 +324,78 @@ describe('Phase 3: Financial Insight UI Components Logic', () => {
     expect(markup).toContain('Rp 150.000');
     expect(markup).toContain('border-amber-500');
     expect(markup).toContain('Kategorikan Transaksi');
+  });
+
+  // T-U15: Priority Inbox menampilkan semua masalah actionable, termasuk W-2 saat W-1 aktif
+  it('T-U15: should show every actionable insight in the domain-based Priority Inbox', () => {
+    const dailyBillsResult: PeriodInsightResult = {
+      periodType: 'DAILY',
+      state: 'INSIGHT_AVAILABLE',
+      insight: {
+        id: 'daily-immediate-bills-due',
+        periodType: 'DAILY',
+        domain: 'TAGIHAN',
+        urgency: 'WARNING',
+        title: 'Tagihan Jatuh Tempo Segera',
+        observation: '1 tagihan sebesar Rp 1.000.000 jatuh tempo besok.',
+        evidence: {
+          currentValue: 'Rp 1.000.000',
+          diff: '1 tagihan: Listrik',
+        },
+        interpretation: 'Tagihan dekat jatuh tempo.',
+        recommendation: 'Siapkan dana pembayaran.',
+        actionTarget: 'bills',
+        actionLabel: 'Lihat Daftar Tagihan',
+        nominalImpact: 1_000_000,
+      },
+    };
+
+    const weeklyCombinedResult: PeriodInsightResult = {
+      periodType: 'WEEKLY',
+      state: 'INSIGHT_AVAILABLE',
+      insight: weeklyBillsResult.insight,
+      insights: [weeklyBillsResult.insight!, uncategorizedResult.insight!],
+    };
+
+    const markup = renderSection(dailyBillsResult, weeklyCombinedResult, stableResult);
+
+    expect(markup).toContain('Perlu Perhatian');
+    expect(markup).toContain('3 hal perlu ditinjau');
+    expect(markup).toContain('Tagihan Jatuh Tempo Segera');
+    expect(markup).toContain('Beban Tagihan 7 Hari ke Depan');
+    expect(markup).toContain('Transaksi Belum Dikategorikan');
+
+    // W-1 dan W-2 sama-sama tampil; W-2 tidak ditekan oleh W-1.
+    expect(markup.indexOf('Beban Tagihan 7 Hari ke Depan')).toBeLessThan(
+      markup.indexOf('Transaksi Belum Dikategorikan')
+    );
+
+    // Status stabil diringkas menjadi metadata kecil, bukan kartu penuh.
+    expect(markup).toContain('Bulanan stabil');
+    expect(markup).not.toContain('Kondisi Terkendali');
+    expect(markup).not.toContain('Analisis Belum Aktif');
+  });
+
+  // T-U16: Priority Inbox meringkas periode aman dan periode yang menunggu data
+  it('T-U16: should summarize non-actionable periods without rendering fallback cards', () => {
+    const dailyInsufficientResult: PeriodInsightResult = {
+      ...insufficientResult,
+      periodType: 'DAILY',
+      fallbackMessage: 'Tambahkan akun dompet untuk melihat ringkasan harian.',
+    };
+    const weeklyStableResult: PeriodInsightResult = {
+      ...stableResult,
+      periodType: 'WEEKLY',
+    };
+
+    const markup = renderSection(dailyInsufficientResult, weeklyStableResult, stableResult);
+
+    expect(markup).toContain('Tidak ada hal mendesak');
+    expect(markup).toContain('Harian menunggu data');
+    expect(markup).toContain('Mingguan stabil');
+    expect(markup).toContain('Bulanan stabil');
+    expect(markup).not.toContain('Kondisi Terkendali');
+    expect(markup).not.toContain('Analisis Belum Aktif');
+    expect(markup).not.toContain('<button');
   });
 });

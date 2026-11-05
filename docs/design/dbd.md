@@ -52,16 +52,28 @@ Gradient bukan bahasa visual utama. Gradient boleh digunakan secara terbatas seb
 - Form transaksi: Bottom Sheet di mobile dan centered dialog di desktop.
 - Focus state harus terlihat saat navigasi keyboard.
 
+### 6.1 Priority Inbox
+
+- Insight actionable ditampilkan sebagai daftar kartu vertikal tanpa batas jumlah; setiap kartu memakai kerangka visual yang sama dengan informasi finansial lain.
+- Identitas utama kartu adalah label domain (`Saldo`, `Tagihan`, `Pengeluaran`, `Target`, `Data`). Badge urgensi tetap terlihat, sedangkan periode (`Harian`, `Mingguan`, `Bulanan`) menjadi metadata kecil berukuran lebih rendah.
+- Angka defisit atau nominal dampak menjadi elemen paling dominan di dalam kartu. Label dan nilai evidence harus terbaca sebagai pasangan yang jelas.
+- Warna mengikuti urgensi, bukan domain: merah untuk kritis, amber untuk peringatan, dan nada tenang untuk peluang, kerapian, atau informasi.
+- Periode yang stabil atau menunggu data tidak dirender sebagai kartu penuh; keduanya diringkas menjadi chip kecil agar tidak berebut perhatian dengan masalah nyata.
+- Empty state “Tidak ada hal mendesak” memakai nada emerald yang tenang dan tidak menampilkan CTA jika tidak ada tindakan yang diperlukan.
+
 ## 7. Layout dan Navigasi
 
 Route utama:
 
 - `/` — Dashboard.
-- `/transactions` — Transactions.
-- `/accounts` — Accounts.
+- `/transactions` — Transaksi.
+- `/accounts` — Dompet (Akun).
 - `/bills` — Tagihan.
+- `/goals` — Target tabungan.
 
-Mobile menggunakan bottom navigation dan FAB untuk transaksi baru. Desktop menggunakan sidebar kiri sekitar `w-64` dan konten maksimal `max-w-6xl`. Tabs hanya untuk navigasi sekunder dalam sebuah modul.
+Mobile menggunakan bottom navigation dan FAB untuk transaksi baru. Desktop menggunakan sidebar kiri sekitar `w-64` dan konten maksimal `max-w-6xl`. Tabs dan dialog hanya untuk navigasi sekunder dalam sebuah modul. Tidak ada route `/settings`.
+
+Kartu Goal dan alokasi dana menggunakan pola kartu yang sama dengan informasi finansial lain: angka dominan, status jelas, dan aksi utama yang mudah dijangkau. Alokasi dana tidak boleh divisualisasikan sebagai perpindahan saldo akun.
 
 ## 8. Responsive Behavior
 

@@ -3,27 +3,32 @@
  * Aturan deteksi wawasan Bulanan (Monthly Insight Rules).
  * 
  * Cakupan:
- * 1. CATEGORY_SPENDING_SURGE: Lonjakan pengeluaran kategori MTD vs MTD-Lalu ekuivalen >= 25% dengan selisih >= Rp100.000.
+ * 1. CATEGORY_SPENDING_OVER_PRIOR_MONTH: Total pengeluaran kategori bulan berjalan (tanggal 1 s.d. hari ini)
+ *    lebih besar dari total penuh kategori yang sama pada bulan lalu.
  * 2. GOAL_APPROACHING_TARGET: Target tabungan aktif mendekati target nominal (80% - <100%).
  *    Proteksi: Over-allocation (>= 100%) dan target non-positif dilarang memicu insight ini.
  */
 
 import type { Goal } from '@/lib/db/schema';
 import type { FinancialInsight, InsightEngineInput } from '../insightTypes';
-import { getMonthlyWindows, isWithinRange } from '../periodHelper';
+import { getMonthlyWindows, getPriorFullMonthWindow, isWithinRange } from '../periodHelper';
 import { filterExpenses, evaluateMonthlyComparisonSufficiency } from '../dataSufficiency';
 
 /**
- * Rule M-1: CATEGORY_SPENDING_SURGE
- * Membandingkan pengeluaran per kategori pada MTD bulan berjalan terhadap rentang MTD ekuivalen bulan lalu.
+ * Rule M-1: CATEGORY_SPENDING_OVER_PRIOR_MONTH
+ * Membandingkan total pengeluaran per kategori bulan berjalan (tanggal 1 s.d. hari ini)
+ * terhadap total penuh kategori yang sama pada bulan lalu.
  */
 export function evaluateCategorySpendingSurge(input: InsightEngineInput): FinancialInsight | null {
   const ref = input.referenceDate ?? new Date();
-  const { currentWindow, priorWindow } = getMonthlyWindows(ref);
+  const { currentWindow } = getMonthlyWindows(ref);
+  const priorFullMonthWindow = getPriorFullMonthWindow(ref);
 
   const allExpenses = filterExpenses(input.transactions);
   const currentMtdExpenses = allExpenses.filter((tx) => isWithinRange(tx.transaction_date, currentWindow));
-  const priorMtdExpenses = allExpenses.filter((tx) => isWithinRange(tx.transaction_date, priorWindow));
+  const priorFullMonthExpenses = allExpenses.filter((tx) =>
+    isWithinRange(tx.transaction_date, priorFullMonthWindow)
+  );
 
   // Agregasi belanja per category_id
   const currentCategoryMap = new Map<string, { total: number; count: number }>();
@@ -37,7 +42,7 @@ export function evaluateCategorySpendingSurge(input: InsightEngineInput): Financ
   }
 
   const priorCategoryMap = new Map<string, { total: number; count: number }>();
-  for (const tx of priorMtdExpenses) {
+  for (const tx of priorFullMonthExpenses) {
     if (!tx.category_id) continue;
     const existing = priorCategoryMap.get(tx.category_id) || { total: 0, count: 0 };
     priorCategoryMap.set(tx.category_id, {
@@ -49,7 +54,7 @@ export function evaluateCategorySpendingSurge(input: InsightEngineInput): Financ
   // Buat map nama kategori untuk lookup cepat (termasuk kategori non-aktif jika ada histori)
   const categoryNameMap = new Map<string, string>(input.categories.map((c) => [c.id, c.name]));
 
-  // Cari kategori dengan lonjakan kenaikan tertinggi yang memenuhi ambang batas keandalan
+  // Cari kategori dengan selisih nominal terbesar terhadap total penuh bulan lalu.
   let highestSurgeInsight: FinancialInsight | null = null;
   let maxDiff = 0;
 
@@ -57,37 +62,35 @@ export function evaluateCategorySpendingSurge(input: InsightEngineInput): Financ
     const priorData = priorCategoryMap.get(categoryId);
     const priorTotal = priorData?.total ?? 0;
 
-    // Evaluasi kecukupan data untuk kategori ini (minimal hari ke-3, tx count >= 3, baseline prior >= Rp100.000)
-    const sufficiency = evaluateMonthlyComparisonSufficiency(ref, currentMtdExpenses, priorTotal, 3, 3, 100_000);
+    // Baseline penuh bulan lalu >= Rp100.000 dan minimal 1 transaksi kategori bulan ini.
+    const sufficiency = evaluateMonthlyComparisonSufficiency(currentData.count, priorTotal, 1, 100_000);
     if (!sufficiency.isSufficient) continue;
 
     const diff = currentData.total - priorTotal;
-    const percentIncrease = Math.round((diff / priorTotal) * 100);
 
-    // Syarat kenaikan: Minimal 25% dan selisih absolut minimal Rp100.000
-    if (percentIncrease >= 25 && diff >= 100_000) {
-      if (diff > maxDiff) {
-        maxDiff = diff;
-        const categoryName = categoryNameMap.get(categoryId) || 'Kategori';
+    // Comparator ketat: total bulan berjalan harus benar-benar lebih besar dari total penuh bulan lalu.
+    if (diff > maxDiff) {
+      maxDiff = diff;
+      const categoryName = categoryNameMap.get(categoryId) || 'Kategori';
 
-        highestSurgeInsight = {
-          id: `monthly-category-surge-${categoryId}`,
-          periodType: 'MONTHLY',
-          urgency: 'WARNING',
-          title: `Lonjakan Pengeluaran: ${categoryName}`,
-          observation: `Pengeluaran pada kategori "${categoryName}" meningkat +${percentIncrease}% dibandingkan periode yang sama bulan lalu.`,
-          evidence: {
-            currentValue: `Bulan ini: Rp ${currentData.total.toLocaleString('id-ID')}`,
-            previousValue: `Bulan lalu: Rp ${priorTotal.toLocaleString('id-ID')}`,
-            diff: `+Rp ${diff.toLocaleString('id-ID')} (+${percentIncrease}%)`,
-          },
-          interpretation: `Kategori ${categoryName} mengambil porsi arus kas yang lebih besar dan bertambah lebih cepat dari kebiasaan belanja bulan sebelumnya.`,
-          recommendation: `Tinjau detail transaksi ${categoryName} untuk mengevaluasi apakah ada pengeluaran luar biasa yang dapat ditekan kembali.`,
-          actionTarget: 'transactions',
-          actionLabel: 'Tinjau Transaksi Kategori',
-          nominalImpact: diff,
-        };
-      }
+      highestSurgeInsight = {
+        id: `monthly-category-surge-${categoryId}`,
+        periodType: 'MONTHLY',
+        domain: 'PENGELUARAN',
+        urgency: 'WARNING',
+        title: `Melebihi Total Bulan Lalu: ${categoryName}`,
+        observation: `Pengeluaran kategori "${categoryName}" bulan ini Rp ${currentData.total.toLocaleString('id-ID')} sudah melebihi total pengeluaran bulan lalu Rp ${priorTotal.toLocaleString('id-ID')}.`,
+        evidence: {
+          currentValue: `Bulan ini: Rp ${currentData.total.toLocaleString('id-ID')}`,
+          previousValue: `Bulan lalu: Rp ${priorTotal.toLocaleString('id-ID')}`,
+          diff: `+Rp ${diff.toLocaleString('id-ID')}`,
+        },
+        interpretation: `Kategori ${categoryName} menyerap dana lebih besar dibanding total belanja bulan lalu, meskipun bulan berjalan belum selesai.`,
+        recommendation: `Tinjau detail transaksi ${categoryName} dan pertimbangkan menahan pengeluaran kategori ini sampai akhir bulan.`,
+        actionTarget: 'transactions',
+        actionLabel: 'Tinjau Transaksi Kategori',
+        nominalImpact: diff,
+      };
     }
   }
 
@@ -135,6 +138,7 @@ export function evaluateGoalApproachingTarget(goals: Goal[]): FinancialInsight |
   return {
     id: `monthly-goal-approaching-${goal.id}`,
     periodType: 'MONTHLY',
+    domain: 'TARGET',
     urgency: 'OPPORTUNITY',
     title: `Target Tabungan Hampir Selesai: ${goal.name}`,
     observation: `Target "${goal.name}" telah terkumpul ${percent}% dari total sasaran.`,

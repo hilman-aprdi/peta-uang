@@ -12,6 +12,7 @@ import {
 import type {
   FinancialInsight,
   PeriodInsightResult,
+  InsightDomain,
   InsightUrgency,
   InsightPeriodType,
 } from '@/lib/insight/insightTypes';
@@ -27,8 +28,10 @@ interface ContextItem {
   value: string;
 }
 
-const PERIOD_LABEL_CLASS =
-  'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+const DOMAIN_LABEL_CLASS =
+  'text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300';
+const PERIOD_META_CLASS =
+  'rounded border border-slate-200 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-700 dark:text-slate-500';
 const BADGE_BASE_CLASS =
   'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold';
 const TITLE_CLASS =
@@ -57,6 +60,27 @@ function getPeriodBadgeLabel(periodType: InsightPeriodType): string {
     case 'MONTHLY':
       return 'Bulanan';
   }
+}
+
+const DOMAIN_LABELS: Record<InsightDomain, string> = {
+  SALDO: 'Saldo',
+  TAGIHAN: 'Tagihan',
+  PENGELUARAN: 'Pengeluaran',
+  TARGET: 'Target',
+  DATA: 'Data',
+};
+
+/**
+ * Domain tetap dapat ditampilkan untuk insight lama yang belum memiliki field domain.
+ */
+function resolveInsightDomain(insight: FinancialInsight): InsightDomain {
+  if (insight.domain) return insight.domain;
+  if (insight.id.startsWith('daily-safe-to-spend')) return 'SALDO';
+  if (insight.id.includes('bills')) return 'TAGIHAN';
+  if (insight.id.includes('uncategorized')) return 'DATA';
+  if (insight.id.includes('goal')) return 'TARGET';
+  if (insight.id.includes('monthly-category')) return 'PENGELUARAN';
+  return 'SALDO';
 }
 
 function getUrgencyBadge(urgency: InsightUrgency) {
@@ -151,8 +175,8 @@ function parseBillCount(raw?: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function getSurgeCategory(title: string, observation: string): string | null {
-  const fromTitle = /^Lonjakan Pengeluaran:\s*(.+)$/.exec(title)?.[1];
+function getCategoryComparisonName(title: string, observation: string): string | null {
+  const fromTitle = /^(?:Lonjakan Pengeluaran|Melebihi Total Bulan Lalu):\s*(.+)$/.exec(title)?.[1];
   const fromObservation = /kategori\s+"([^"]+)"/i.exec(observation)?.[1];
 
   return fromTitle?.trim() || fromObservation?.trim() || null;
@@ -167,6 +191,7 @@ function getDiffHighlight(diff?: string): string | null {
 }
 
 interface InsightCardShellProps {
+  domainLabel: string;
   periodLabel: string;
   badge: React.ReactNode;
   muted?: boolean;
@@ -176,6 +201,7 @@ interface InsightCardShellProps {
 }
 
 function InsightCardShell({
+  domainLabel,
   periodLabel,
   badge,
   muted = false,
@@ -196,7 +222,10 @@ function InsightCardShell({
         .join(' ')}
     >
       <header className="flex items-start justify-between gap-2">
-        <span className={PERIOD_LABEL_CLASS}>{periodLabel}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <span className={DOMAIN_LABEL_CLASS}>{domainLabel}</span>
+          <span className={PERIOD_META_CLASS}>{periodLabel}</span>
+        </div>
         {badge}
       </header>
 
@@ -216,7 +245,11 @@ function ComparisonGrid({ items }: { items: ContextItem[] }) {
     <div
       className={[
         'grid gap-3 rounded-xl bg-slate-100 p-2.5 dark:bg-slate-800/50',
-        items.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
+        items.length >= 3
+          ? 'grid-cols-1 sm:grid-cols-3'
+          : items.length > 1
+            ? 'grid-cols-2'
+            : 'grid-cols-1',
       ].join(' ')}
     >
       {items.map((item) => (
@@ -296,10 +329,14 @@ function InsightContent({ insight }: { insight: FinancialInsight }) {
     recommendation,
   } = insight;
 
-  // A. Harian — defisit Safe-to-Spend.
+  // A. Harian — defisit Safe-to-Spend dengan diagnosis penyebab.
   if (id === 'daily-safe-to-spend-critical') {
-    const saldoRiil = splitLabeledValue(evidence.previousValue);
-    const tagihanTarget = splitLabeledValue(evidence.diff);
+    const breakdownItems =
+      evidence.breakdown && evidence.breakdown.length > 0
+        ? evidence.breakdown
+        : [splitLabeledValue(evidence.previousValue), splitLabeledValue(evidence.diff)].filter(
+            (item): item is ContextItem => item !== null
+          );
 
     return (
       <>
@@ -308,14 +345,10 @@ function InsightContent({ insight }: { insight: FinancialInsight }) {
           <p className={`${HERO_CLASS} ${getHeroTone(urgency)}`}>
             {evidence.currentValue}
           </p>
-          <p className={DESCRIPTION_CLASS}>{interpretation}</p>
+          <p className={DESCRIPTION_CLASS}>{observation}</p>
         </div>
 
-        <ComparisonGrid
-          items={[saldoRiil, tagihanTarget].filter(
-            (item): item is ContextItem => item !== null
-          )}
-        />
+        <ComparisonGrid items={breakdownItems} />
 
         <RecommendationCallout recommendation={recommendation} />
       </>
@@ -363,22 +396,23 @@ function InsightContent({ insight }: { insight: FinancialInsight }) {
     );
   }
 
-  // C. Bulanan — lonjakan pengeluaran kategori (perbandingan apple-to-apple).
+  // C. Bulanan — pengeluaran kategori bulan berjalan vs total penuh bulan lalu.
   if (id.startsWith('monthly-category-surge')) {
-    const category = getSurgeCategory(title, observation);
-    const percent =
-      parsePercentage(evidence.diff) ?? parsePercentage(observation);
+    const category = getCategoryComparisonName(title, observation);
     const current = splitLabeledValue(evidence.currentValue);
     const previous = splitLabeledValue(evidence.previousValue);
     const highlight = getDiffHighlight(evidence.diff);
 
-    const heading = category
-      ? `Lonjakan: ${category}${percent !== null ? ` (+${percent}%)` : ''}`
-      : title;
+    const heading = category ? `Melebihi Bulan Lalu: ${category}` : title;
 
     return (
       <>
-        <h4 className={TITLE_CLASS}>{heading}</h4>
+        <div className="space-y-1">
+          <h4 className={TITLE_CLASS}>{heading}</h4>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Bulan berjalan vs total bulan lalu
+          </p>
+        </div>
 
         <ComparisonGrid
           items={[current, previous].filter(
@@ -447,6 +481,7 @@ export function FinancialInsightCard({
   // 1. Kondisi: INSIGHT_AVAILABLE
   if (result.state === 'INSIGHT_AVAILABLE' && result.insight) {
     const insight = result.insight;
+    const domainLabel = DOMAIN_LABELS[resolveInsightDomain(insight)];
     const badge = getUrgencyBadge(insight.urgency);
     const Icon = badge.icon;
     const action =
@@ -460,6 +495,7 @@ export function FinancialInsightCard({
 
     return (
       <InsightCardShell
+        domainLabel={domainLabel}
         periodLabel={periodLabel}
         className={className}
         badge={
@@ -486,6 +522,7 @@ export function FinancialInsightCard({
   if (result.state === 'INSUFFICIENT_DATA') {
     return (
       <InsightCardShell
+        domainLabel="Ringkasan"
         periodLabel={periodLabel}
         className={className}
         muted
@@ -514,6 +551,7 @@ export function FinancialInsightCard({
   // 3. Kondisi: NO_SIGNIFICANT_FINDING
   return (
     <InsightCardShell
+      domainLabel="Ringkasan"
       periodLabel={periodLabel}
       className={className}
       badge={
