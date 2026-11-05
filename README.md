@@ -1,192 +1,235 @@
 # PetaUang
-![PetaUang Icon](public/icon-192.png)
-> **Know your money. Find your direction.**
 
-PetaUang adalah aplikasi pengelolaan keuangan pribadi berbasis *local-first* untuk mencatat pemasukan, pengeluaran, transfer antar-akun, mengelola tagihan, serta mengelola target tabungan. Dashboard menyajikan ringkasan saldo akun, Safe-to-Spend, arus kas bulan berjalan, wawasan finansial, dan transaksi hari ini.
+> **Kenali uang Anda. Temukan arah Anda.**
 
-## Overview
+PetaUang adalah aplikasi keuangan pribadi dengan pendekatan *local-first* yang membantu individu memahami, mengatur, dan mengelola keuangan sehari-hari.
 
-Mengelola keuangan pribadi seharusnya tidak menjadi sesuatu yang rumit.
+Catat pemasukan dan pengeluaran, kelola akun dan tagihan, atur target tabungan, serta pahami kondisi keuangan Anda — semuanya dalam satu aplikasi.
 
-PetaUang membantu individu memahami kondisi keuangan sehari-hari melalui satu tempat untuk mencatat transaksi, memantau saldo akun, mengelola target tabungan, dan mengawasi kewajiban pembayaran.
+Tanpa registrasi akun. Tanpa ketergantungan pada cloud. Data keuangan Anda tetap tersimpan di browser.
 
-Dengan pendekatan *local-first*, PetaUang tidak memerlukan proses registrasi atau login. Seluruh catatan keuangan disimpan secara lokal di browser menggunakan IndexedDB melalui Dexie.js. Saldo dan ringkasan dashboard dihitung berdasarkan data yang tersimpan tersebut.
+---
 
-## Fitur Utama
+## Gambaran Umum
 
-- **Dashboard Keuangan:** Menampilkan Current Balance, Safe-to-Spend, Cash In, Cash Out, Net Cash Flow bulan berjalan, wawasan finansial, dan seluruh transaksi hari ini.
-- **Pengelolaan Akun:** Membuat dan mengubah akun seperti uang tunai, rekening bank, dompet digital, dan investasi. Saat mengedit, **Saldo Saat Ini** dapat disesuaikan dan selisihnya dicatat sebagai transaksi penyesuaian. Akun dapat dinonaktifkan dengan peringatan; transaksi transfer yang melibatkan akun tersebut akan dihapus, sedangkan catatan pemasukan dan pengeluaran tetap dipertahankan.
-- **Pengelolaan Transaksi:** Mencatat, mengubah, dan menghapus transaksi pemasukan maupun pengeluaran, lengkap dengan kategori, catatan, tanggal, dan akun terkait.
-- **Transfer Antar-Akun:** Memindahkan saldo antar-akun. Transfer hanya dapat dilakukan jika saldo akun sumber mencukupi dan tidak dihitung sebagai pemasukan maupun pengeluaran.
-- **Pengelolaan Kategori:** Membuat, mengubah, dan mengelola kategori beserta ikonnya. Penonaktifan kategori tetap mempertahankan referensi transaksi historis. Transaksi tanpa kategori ditampilkan sebagai **Uncategorized**.
-- **Pengelolaan Tagihan:** Membuat, mengubah, menghapus, serta memperbarui status pembayaran tagihan menjadi lunas atau belum lunas. Tagihan yang belum dibayar menjadi pengurang dalam perhitungan Safe-to-Spend.
-- **Target Tabungan:** Membuat target, mengalokasikan dana, menarik dana, dan mencatat pembelanjaan dari pos target. Alokasi mengurangi Safe-to-Spend tanpa mengubah saldo kas akun.
-- **Wawasan Finansial:** Menampilkan wawasan deterministik untuk periode Harian, Mingguan, dan Bulanan berdasarkan data lokal.
-- **Filter Periode Transaksi:** Halaman transaksi menyediakan filter bulan, opsi **Semua Waktu** sebagai toggle, dan tombol kembali ke **Bulan Ini**.
-- **Ekspor CSV:** Mengunduh catatan transaksi dalam format CSV dengan sembilan kolom.
-- **Progressive Web App (PWA):** Mendukung manifest web, ikon aplikasi, dan Service Worker. Kemampuan instalasi serta penggunaan offline bergantung pada browser dan konfigurasi deployment, sehingga perlu diuji pada lingkungan target.
+Mengelola keuangan pribadi seharusnya tidak rumit.
 
-### Perhitungan Keuangan
+PetaUang menyediakan satu tempat untuk mencatat aktivitas keuangan, memantau saldo akun, mengelola kewajiban keuangan, dan memahami pola pengeluaran.
 
-**Safe-to-Spend**
+Dibangun dengan arsitektur **local-first**, PetaUang menyimpan data keuangan langsung di browser menggunakan IndexedDB. Pengguna dapat mulai mengelola keuangannya tanpa membuat akun atau bergantung pada database jarak jauh.
 
-Menunjukkan estimasi dana yang masih tersedia untuk digunakan setelah memperhitungkan seluruh tagihan yang belum dibayar dan dana yang dialokasikan ke target tabungan.
+### Fitur Utama
+
+- **Dashboard Keuangan** — Pantau saldo saat ini, Safe-to-Spend, arus kas bulanan, wawasan finansial, dan transaksi hari ini.
+- **Pengelolaan Akun** — Buat dan kelola beberapa akun keuangan, termasuk uang tunai, rekening bank, dompet digital, dan investasi. Penyesuaian saldo saat ini dicatat sebagai transaksi penyesuaian.
+- **Pengelolaan Transaksi** — Catat, ubah, dan hapus transaksi pemasukan maupun pengeluaran, dengan kategori opsional, catatan, tanggal, dan akun terkait. Transaksi tanpa kategori ditampilkan sebagai **Uncategorized**.
+- **Transfer Antar-Akun** — Pindahkan dana antar-akun tanpa menghitung transfer sebagai pemasukan atau pengeluaran.
+- **Pengelolaan Kategori** — Buat, ubah, dan nonaktifkan kategori tanpa menghapus referensi transaksi historis.
+- **Pengelolaan Tagihan** — Buat dan kelola tagihan, catat status pembayarannya, dan perhitungkan tagihan yang belum dibayar dalam Safe-to-Spend.
+- **Target Tabungan** — Buat target tabungan, alokasikan dana, tarik alokasi, dan catat pengeluaran langsung dari target.
+- **Wawasan Finansial** — Tinjau wawasan harian, mingguan, dan bulanan yang dihasilkan secara deterministik berdasarkan data keuangan lokal.
+- **Filter Transaksi** — Tinjau transaksi berdasarkan bulan atau gunakan **Semua Waktu** untuk melihat seluruh riwayat transaksi.
+- **Ekspor CSV** — Ekspor catatan transaksi ke file CSV.
+- **Progressive Web App (PWA)** — Menyediakan manifest aplikasi web, ikon aplikasi, dan dukungan Service Worker. Kemampuan instalasi dan penggunaan offline bergantung pada dukungan browser serta konfigurasi deployment dan belum diverifikasi pada seluruh browser target.
+
+---
+
+## Ringkasan Keuangan
+
+PetaUang menggunakan beberapa perhitungan keuangan untuk membantu pengguna memahami dana yang tersedia.
+
+### Safe-to-Spend
+
+Safe-to-Spend menunjukkan perkiraan dana yang tersedia untuk digunakan setelah memperhitungkan tagihan yang belum dibayar dan dana yang dialokasikan ke target tabungan.
 
 ```text
-Current Balance - Total Unpaid Bills - Total Allocated Goals
+Safe-to-Spend =
+Saldo Saat Ini
+- Total Tagihan Belum Dibayar
+- Total Dana yang Dialokasikan ke Target
 ```
 
-**Cash Flow**
+Membuat target tabungan tidak memindahkan saldo akun yang sebenarnya. Alokasi dana mengurangi bagian dana yang dianggap aman untuk dibelanjakan, sedangkan penarikan alokasi mengembalikannya. Pengeluaran dari target mencatat pengeluaran aktual sekaligus mengurangi alokasi target.
 
-Arus kas dihitung dari pemasukan dan pengeluaran, sedangkan transfer antar-akun tidak diperhitungkan karena bukan merupakan pemasukan atau pengeluaran. Cakupan periode berbeda menurut tampilan:
+### Arus Kas
 
-- **Dashboard:** selalu bulan berjalan; Dashboard tidak memiliki filter periode.
-- **Halaman Transaksi:** bulan yang dipilih, atau seluruh transaksi saat mode **Semua Waktu** aktif.
+Arus kas menunjukkan selisih antara pemasukan dan pengeluaran. Transfer antar-akun tidak dihitung karena bukan pemasukan atau pengeluaran eksternal.
 
-Dashboard hanya menampilkan transaksi hari ini berdasarkan kalender lokal perangkat. Daftar transaksi hari ini tidak otomatis berganti tepat tengah malam sampai terjadi render atau perubahan data berikutnya.
+| Bagian | Periode |
+|---|---|
+| Dashboard | Bulan kalender berjalan |
+| Transaksi | Bulan yang dipilih atau **Semua Waktu** |
 
-## Tech Stack
+Daftar transaksi di Dashboard terpisah dari ringkasan keuangan bulanan. Daftar tersebut menampilkan seluruh transaksi yang tanggalnya termasuk hari kalender lokal saat ini. Daftar tidak otomatis diperbarui tepat tengah malam kecuali halaman dirender ulang atau datanya berubah.
 
-PetaUang dibangun menggunakan teknologi berikut:
+---
+
+## Cara Kerja
+
+### Arsitektur Local-First
+
+PetaUang menggunakan penyimpanan berbasis browser, bukan backend terpusat.
+
+```text
+Interaksi Pengguna
+       |
+       v
+Antarmuka Aplikasi
+       |
+       v
+Layanan Aplikasi
+       |
+       v
+Dexie.js
+       |
+       v
+IndexedDB
+```
+
+Catatan keuangan disimpan secara lokal di browser melalui IndexedDB, sementara Dexie.js mengelola operasi database.
+
+Dengan arsitektur ini, aplikasi tidak memerlukan:
+
+- Registrasi atau autentikasi pengguna.
+- Database aplikasi jarak jauh.
+- Sinkronisasi data keuangan melalui cloud.
+
+**Penting:** Penyimpanan lokal tidak sama dengan penyimpanan permanen atau pencadangan otomatis. Menghapus data browser atau berpindah perangkat dapat membuat catatan yang ada tidak lagi tersedia.
+
+---
+
+## Teknologi
 
 | Teknologi | Kegunaan |
 |---|---|
-| Next.js App Router | Framework aplikasi, pengelolaan rute, dan static export |
-| React | Membangun antarmuka pengguna |
-| TypeScript | Menambahkan sistem tipe dan pemeriksaan kode |
-| Tailwind CSS | Styling dan pengembangan antarmuka responsif |
-| IndexedDB | Penyimpanan database lokal di browser |
-| Dexie.js | Mengelola akses dan transaksi IndexedDB |
-| dexie-react-hooks | Menghubungkan data IndexedDB dengan antarmuka secara reaktif |
-| Vitest | Menjalankan pengujian otomatis |
-| fake-indexeddb | Menyediakan lingkungan IndexedDB untuk pengujian |
-| Lucide React | Menyediakan ikon antarmuka |
+| Next.js App Router | Framework aplikasi, routing, dan static export |
+| React | Antarmuka pengguna |
+| TypeScript | Keamanan tipe |
+| Tailwind CSS v4 | Styling |
+| IndexedDB | Penyimpanan database lokal |
+| Dexie.js | Pengelolaan IndexedDB |
+| dexie-react-hooks | Query database reaktif |
+| Vitest | Pengujian otomatis |
+| fake-indexeddb | Lingkungan IndexedDB untuk pengujian |
+| Lucide React | Ikon antarmuka |
 
-## Getting Started
+---
 
-Ikuti langkah-langkah berikut untuk menjalankan PetaUang di lingkungan lokal.
+## Memulai
 
 ### Prasyarat
 
-Pastikan perangkat telah memiliki:
-
-- Node.js yang kompatibel dengan versi Next.js yang digunakan (Next.js 16 membutuhkan Node.js minimal 20.9).
-- npm.
+- Node.js versi 20.9 atau lebih baru
+- npm
 
 ### Instalasi
 
-1. Clone repository:
+Clone repository:
 
-   ```bash
-   git clone https://github.com/hilman-aprdi/peta-uang.git
-   ```
+```bash
+git clone https://github.com/hilman-aprdi/peta-uang.git
+```
 
-2. Masuk ke direktori proyek:
+Masuk ke direktori proyek:
 
-   ```bash
-   cd peta-uang
-   ```
+```bash
+cd peta-uang
+```
 
-3. Instal seluruh dependensi:
+Instal dependensi:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
-4. Jalankan development server:
+Jalankan development server:
 
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
-5. Buka aplikasi melalui browser:
-
-   [http://localhost:3000](http://localhost:3000)
-
-Saat ini, aplikasi tidak memerlukan konfigurasi environment variables.
+Buka [http://localhost:3000](http://localhost:3000) di browser. Saat ini aplikasi tidak memerlukan environment variable.
 
 ### Perintah yang Tersedia
 
-| Perintah | Fungsi |
+| Perintah | Keterangan |
 |---|---|
 | `npm run dev` | Menjalankan development server |
 | `npm run lint` | Menjalankan ESLint |
 | `npm test` | Menjalankan pengujian otomatis |
 | `npm run test:watch` | Menjalankan pengujian dalam mode watch |
-| `npx tsc --noEmit` | Memeriksa tipe data TypeScript |
-| `npm run build` | Membuat production build berupa static export |
+| `npx tsc --noEmit` | Menjalankan pemeriksaan tipe TypeScript |
+| `npm run build` | Membuat static export untuk production |
 
-Proyek ini menggunakan konfigurasi `output: "export"` pada `next.config.ts`. Hasil build akan disimpan di direktori `out/` dan dapat di-deploy ke layanan hosting statis.
+### Production Build
 
-Perlu diperhatikan bahwa `npm run start` bukan perintah untuk menyajikan hasil static export tersebut.
+PetaUang menggunakan static export Next.js melalui konfigurasi `output: "export"`.
 
-## Panduan Penggunaan
+Jalankan:
 
-Berikut langkah dasar untuk mulai menggunakan PetaUang:
+```bash
+npm run build
+```
 
-1. **Buka aplikasi.** Tidak diperlukan proses registrasi maupun login.
-2. **Buat akun keuangan.** Buka menu **Dompet** untuk menambahkan akun dan menentukan saldo awal.
-3. **Catat transaksi.** Buka menu **Transaksi** untuk mencatat pemasukan, pengeluaran, atau transfer antar-akun. Kategori bersifat opsional untuk pemasukan dan pengeluaran. Transaksi tanpa kategori akan ditampilkan sebagai **Uncategorized**.
-4. **Kelola kategori.** Gunakan menu **Kelola Kategori** pada halaman transaksi untuk membuat, mengubah, atau menonaktifkan kategori.
-5. **Kelola tagihan.** Buka menu **Tagihan** untuk membuat dan mengelola tagihan serta memperbarui status pembayarannya.
-6. **Kelola target tabungan.** Buka menu **Target** untuk membuat target, mengalokasikan dana, menarik dana, atau mencatat pembelanjaan dari pos target.
-7. **Pantau kondisi keuangan.** Dashboard menampilkan Current Balance, Safe-to-Spend, Cash Flow bulan berjalan, wawasan finansial, dan transaksi hari ini. Gunakan tombol pada daftar transaksi hari ini untuk membuka halaman **Transaksi**.
-8. **Tinjau periode transaksi.** Pada halaman **Transaksi**, pilih bulan tertentu atau aktifkan **Semua Waktu**; tombol **Bulan Ini** mengembalikan tampilan ke bulan berjalan.
-9. **Ekspor transaksi.** Gunakan tombol **Export CSV** pada halaman transaksi untuk mengunduh catatan transaksi.
+File hasil build akan tersedia di direktori `out/` dan dapat di-deploy ke layanan hosting statis yang kompatibel. Perintah `npm run start` tidak digunakan untuk menyajikan hasil static export.
+
+---
+
+## Panduan Aplikasi
+
+| Bagian | Keterangan |
+|---|---|
+| Dashboard | Melihat ringkasan keuangan, wawasan, dan transaksi hari ini |
+| Dompet | Mengelola akun keuangan dan saldo |
+| Transaksi | Mencatat dan meninjau pemasukan, pengeluaran, serta transfer |
+| Tagihan | Mengelola tagihan dan status pembayaran |
+| Target | Mengelola target tabungan dan alokasi dana |
+
+Pengelolaan kategori dan ekspor CSV tersedia dari bagian Transaksi.
+
+---
 
 ## Data & Privasi
 
-PetaUang menggunakan pendekatan penyimpanan data lokal (*local-first*). Informasi keuangan disimpan di browser menggunakan IndexedDB yang dikelola melalui Dexie.js.
+PetaUang dirancang dengan mengutamakan kepemilikan data lokal.
 
-Beberapa hal yang perlu diketahui:
+| Aspek | Implementasi Saat Ini |
+|---|---|
+| Penyimpanan data | IndexedDB di browser |
+| Pustaka database | Dexie.js |
+| Nama database | `PetaUangDB` |
+| Autentikasi | Tidak diperlukan |
+| Database jarak jauh | Belum diimplementasikan |
+| Sinkronisasi cloud | Belum diimplementasikan |
+| Ekspor CSV | Hanya catatan transaksi |
+| Cadangan seluruh data aplikasi | Belum tersedia |
 
-- Data akun, kategori, transaksi, tagihan, target tabungan, dan riwayat alokasi target disimpan di database IndexedDB browser dengan nama `PetaUangDB`.
-- Aplikasi belum menggunakan autentikasi akun, database server, maupun sinkronisasi cloud.
-- Ekspor CSV hanya mencakup data transaksi, bukan seluruh data akun, kategori, tagihan, target tabungan, atau kondisi aplikasi.
-- Penyimpanan browser bersifat spesifik terhadap profil browser dan perangkat yang digunakan.
-- Menghapus data situs, menghapus profil browser, atau berpindah perangkat dapat menyebabkan data lokal tidak lagi tersedia.
-- Aplikasi belum menyediakan mekanisme pemulihan data melalui server.
+### Batasan Penting
 
-Simpan salinan data penting secara berkala. Perlu diingat bahwa file CSV yang tersedia bukan merupakan cadangan lengkap seluruh data aplikasi.
+- Data hanya tersedia pada profil browser dan perangkat tempat data tersebut disimpan.
+- Menghapus data situs atau profil browser dapat menyebabkan kehilangan data.
+- Data tidak disinkronkan secara otomatis antarperangkat.
+- Ekspor CSV tidak mencakup seluruh data aplikasi, seperti akun, kategori, tagihan, target tabungan, atau riwayat alokasi.
+- Instalasi PWA dan penggunaan offline bergantung pada dukungan browser serta konfigurasi deployment.
 
-## Batasan Aplikasi
+Pengguna sebaiknya mengambil langkah pencegahan yang sesuai saat mengelola catatan keuangan penting.
 
-Sebagai aplikasi yang menggunakan pendekatan *local-first*, PetaUang memiliki beberapa batasan:
+---
 
-- Belum mendukung sinkronisasi data antarperangkat.
-- Belum menyediakan penyimpanan atau pencadangan otomatis ke cloud.
-- Data bergantung pada penyimpanan browser yang digunakan.
-- Ekspor CSV belum dapat digunakan untuk memulihkan seluruh kondisi aplikasi.
-- Perilaku instalasi PWA dan akses offline bergantung pada browser serta konfigurasi deployment.
+## Dokumentasi Proyek
 
-## Kontribusi
+Untuk informasi lebih rinci tentang persyaratan produk, aturan bisnis, arsitektur, desain database, keputusan teknis, dan status pengembangan, lihat [Dokumentasi Proyek](docs/INDEX.md).
 
-Kontribusi untuk pengembangan PetaUang terbuka bagi siapa saja yang ingin membantu meningkatkan kualitas proyek.
+---
 
-Jika ingin berkontribusi, ikuti langkah berikut:
+## Ucapan Terima Kasih
 
-1. Fork repository ini.
-2. Buat branch baru untuk perubahan yang akan dikerjakan.
-3. Implementasikan perubahan dan tambahkan atau perbarui pengujian jika diperlukan.
-4. Jalankan pemeriksaan berikut:
+PetaUang adalah proyek open-source yang dibuat untuk membantu pengelolaan keuangan pribadi menjadi lebih mudah dipahami, teratur, dan dapat diakses.
 
-   ```bash
-   npm test
-   npx tsc --noEmit
-   npm run lint
-   ```
+**PetaUang — Kenali uang Anda. Temukan arah Anda.**
 
-5. Buat Pull Request dengan deskripsi perubahan yang jelas serta hasil pemeriksaan yang telah dilakukan.
-
-Sebelum mengajukan perubahan terkait produk atau arsitektur, silakan pelajari dokumentasi proyek melalui [`docs/INDEX.md`](docs/INDEX.md).
-
-## Acknowledgements
-
-PetaUang dikembangkan sebagai proyek open-source dengan tujuan membuat pengelolaan keuangan pribadi lebih mudah dipahami, terorganisasi, dan dapat diakses oleh siapa saja.
-
-**PetaUang — Know your money. Find your direction.**
+---
 
 ## Lisensi
 
-PetaUang menggunakan MIT License.
-Lihat file [LICENSE](LICENSE) untuk informasi selengkapnya.
+Proyek ini menggunakan [Lisensi MIT](LICENSE).
